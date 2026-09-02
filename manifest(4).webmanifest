@@ -1,0 +1,38 @@
+{
+  "id": "/jellymusic/",
+  "name": "Music Archive",
+  "short_name": "Music Archive",
+  "description": "Your personal music library.",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "start_url": "/jellymusic/",
+  "scope": "/jellymusic/",
+  "icons": [
+    {
+      "src": "/jellymusic/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/jellymusic/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/jellymusic/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/jellymusic/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
