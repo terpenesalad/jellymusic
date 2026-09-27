@@ -35,17 +35,35 @@
     return t && t.tagName === 'AUDIO' && t.id !== 'audio-preload' && !t.muted;
   }
 
+  /*
+   * Ask the app first. A transcoded stream is generated on the fly and so
+   * reports Infinity for its length, which would leave the lock screen with
+   * no scrubber at all — but the app knows the real duration from the
+   * library metadata. Same for position: when a transcoded stream is
+   * re-requested part-way through a song, the element's clock restarts at
+   * zero while the app tracks where we actually are.
+   */
   function duration() {
+    var fn = appFn('trackDuration');
+    if (fn) {
+      try { var d = fn(); if (typeof d === 'number' && isFinite(d) && d > 0) return d; } catch (e) {}
+    }
     if (!el) return 0;
-    var d = el.duration;
-    // Live radio reports Infinity; report 0 so the scrubber hides itself
-    // rather than drawing a bar of unknown length.
-    return (typeof d === 'number' && isFinite(d) && d > 0) ? d : 0;
+    var ed = el.duration;
+    // Live radio genuinely has no length; report 0 so no scrubber is drawn.
+    return (typeof ed === 'number' && isFinite(ed) && ed > 0) ? ed : 0;
+  }
+  function position() {
+    var fn = appFn('playbackPosition');
+    if (fn) {
+      try { var p = fn(); if (typeof p === 'number' && isFinite(p) && p >= 0) return p; } catch (e) {}
+    }
+    return el ? (el.currentTime || 0) : 0;
   }
 
   function pushState(playing) {
     try {
-      host.setState(!!playing, el ? (el.currentTime || 0) : 0, duration(),
+      host.setState(!!playing, position(), duration(),
                     el ? (el.playbackRate || 1) : 1);
     } catch (e) {}
   }
@@ -101,13 +119,13 @@
     var now = Date.now();
     if (now - lastPush < 1000) return;   // ~1 Hz is plenty for a scrubber
     lastPush = now;
-    try { host.setPosition(el.currentTime || 0, duration()); } catch (err) {}
+    try { host.setPosition(position(), duration()); } catch (err) {}
   }, true);
 
   document.addEventListener('loadedmetadata', function (e) {
     if (!isPlayer(e.target)) return;
     el = e.target;
-    try { host.setPosition(el.currentTime || 0, duration()); } catch (err) {}
+    try { host.setPosition(position(), duration()); } catch (err) {}
   }, true);
 
   /* ── metadata ─────────────────────────────────────────────────────────

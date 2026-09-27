@@ -10,8 +10,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ServiceInfo;
-import android.media.AudioAttributes;
-import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -101,9 +99,6 @@ public class PlaybackService extends Service {
     private MediaSessionCompat session;
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
-    private AudioManager audioManager;
-    private AudioFocusRequest focusRequest;
-    private boolean hasFocus = false;
     private boolean startedForeground = false;
 
     /** Headphones unplugged / bluetooth disconnected — pause, don't blast. */
@@ -116,36 +111,14 @@ public class PlaybackService extends Service {
         }
     };
 
-    private final AudioManager.OnAudioFocusChangeListener focusListener = change -> {
-        switch (change) {
-            case AudioManager.AUDIOFOCUS_LOSS:
-                hasFocus = false;
-                emit("pause", 0);
-                break;
-            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                emit("pause", 0);
-                break;
-            case AudioManager.AUDIOFOCUS_GAIN:
-                hasFocus = true;
-                // Deliberately not auto-resuming. Coming back from a phone call
-                // to music you'd forgotten was playing is worse than tapping
-                // play yourself.
-                break;
-            default:
-                break;
-        }
-    };
-
     @Override
     public void onCreate() {
         super.onCreate();
         createChannel();
 
-        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
         session = new MediaSessionCompat(this, "MusicArchive");
         session.setCallback(new MediaSessionCompat.Callback() {
-            @Override public void onPlay() { requestFocus(); emit("play", 0); }
+            @Override public void onPlay() { emit("play", 0); }
             @Override public void onPause() { emit("pause", 0); }
             @Override public void onSkipToNext() { emit("next", 0); }
             @Override public void onSkipToPrevious() { emit("prev", 0); }
@@ -190,7 +163,7 @@ public class PlaybackService extends Service {
             return START_NOT_STICKY;
         }
 
-        if (ACTION_PLAY.equals(action)) { requestFocus(); emit("play", 0); }
+        if (ACTION_PLAY.equals(action)) { emit("play", 0); }
         else if (ACTION_PAUSE.equals(action)) { emit("pause", 0); }
         else if (ACTION_NEXT.equals(action)) { emit("next", 0); }
         else if (ACTION_PREV.equals(action)) { emit("prev", 0); }
@@ -205,12 +178,8 @@ public class PlaybackService extends Service {
     private void pushForeground() {
         boolean playing = NowPlaying.playing;
 
-        if (playing) {
-            requestFocus();
-            acquireLocks();
-        } else {
-            releaseLocks();
-        }
+        if (playing) acquireLocks();
+        else releaseLocks();
 
         MediaMetadataCompat.Builder meta = new MediaMetadataCompat.Builder()
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, NowPlaying.title)
@@ -322,29 +291,26 @@ public class PlaybackService extends Service {
         nm.createNotificationChannel(ch);
     }
 
-    private void requestFocus() {
-        if (hasFocus || audioManager == null) return;
-        AudioAttributes attrs = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build();
-        // willPauseWhenDucked(false) hands ducking to the system: a navigation
-        // prompt or notification lowers the music instead of stopping it.
-        focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(attrs)
-                .setWillPauseWhenDucked(false)
-                .setOnAudioFocusChangeListener(focusListener)
-                .build();
-        int res = audioManager.requestAudioFocus(focusRequest);
-        hasFocus = (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
-    }
+    /* ── Why there is no audio-focus handling here ──
+       There was, and it was the cause of a vicious half-second stutter.
 
-    private void abandonFocus() {
-        if (audioManager != null && focusRequest != null) {
-            audioManager.abandonAudioFocusRequest(focusRequest);
-        }
-        hasFocus = false;
-    }
+       The audio is played by the WebView, and Chromium already requests
+       audio focus on its own behalf whenever a media element plays — that
+       is how a browser makes other apps duck or pause. This service then
+       requested focus as well, and although both requests come from the
+       same app, the system still treats them as competing: granting ours
+       revoked Chromium's, so Chromium paused the element. The keepalive
+       noticed and started it again, which made Chromium re-request focus,
+       which revoked ours, and so on several times a second.
+
+       The element would play for a fraction of a second at a time, and
+       nothing in the page's own logs showed a pause, because nothing in the
+       page had asked for one.
+
+       The service's real job — keeping the process alive, owning the media
+       session and posting the notification — needs no audio focus at all.
+       Ducking and interruptions are left to the WebView, which was always
+       the component actually producing sound. */
 
     private void acquireLocks() {
         try {
@@ -366,7 +332,6 @@ public class PlaybackService extends Service {
 
     private void teardown() {
         releaseLocks();
-        abandonFocus();
         if (session != null) session.setActive(false);
         stopForeground(true);
         startedForeground = false;
@@ -389,7 +354,6 @@ public class PlaybackService extends Service {
         } catch (Throwable ignored) {
         }
         releaseLocks();
-        abandonFocus();
         if (session != null) {
             session.setActive(false);
             session.release();
