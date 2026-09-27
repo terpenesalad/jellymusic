@@ -1,18 +1,33 @@
 name: Build APK
 
-# Tagging a release is the normal route:
-#     git tag v1.0.0 && git push --tags
-# The manual "Run workflow" button works too, for a one-off build.
+# Three ways in, so whichever feels natural works:
+#   * Publish a release from the GitHub website (any tag name)
+#   * git tag v1.0.0 && git push --tags
+#   * Actions -> Build APK -> Run workflow
+#
+# The original only listened for tags beginning with "v", which meant
+# publishing a release named "1.0.0" from the website quietly did nothing at
+# all — a release appeared, no build ran, and nothing said why.
 on:
+  release:
+    types: [published]
   push:
     tags:
       - 'v*'
+      - '[0-9]*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version name (e.g. 1.0.3). Defaults to a dated build.'
+        description: 'Version / tag (e.g. 1.0.0). An existing tag gets the APK attached to its release.'
         required: false
         default: ''
+
+# Publishing a release from the website fires both a tag push and a release
+# event, so without this the same APK would be built twice, in parallel,
+# racing to attach itself to one release.
+concurrency:
+  group: apk-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write        # needed to create the release
@@ -31,26 +46,65 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # The android-actions/setup-android action is deliberately not used here.
+      # It tries to install a legacy SDK package called "tools" that Google has
+      # since removed from the repository, so it fails outright with
+      # "Failed to find package 'tools'". It was never needed in the first
+      # place: GitHub's Ubuntu runners ship the Android SDK preinstalled, so
+      # this just points at it and adds the two packages this build wants.
+      - name: Point at the preinstalled Android SDK
+        run: |
+          set -uo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK" ]; then
+            echo "::error::No Android SDK found at $SDK"
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK"      >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK"  >> "$GITHUB_ENV"
+
+          # cmdline-tools is versioned, and the version moves with the runner
+          # image, so find it rather than hardcoding a path that will rot.
+          SDKMANAGER="$(find "$SDK/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort | tail -1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager not found under $SDK/cmdline-tools"
+            exit 1
+          fi
+          echo "Using $SDKMANAGER"
+
+          # Licences are normally pre-accepted on the runner; this is a no-op
+          # when they are, and harmless when they aren't.
+          yes 2>/dev/null | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          echo "SDK ready at $SDK"
 
       - name: Work out the version
         id: ver
+        # Passed as env rather than inlined into the script, so a stray quote
+        # in a typed version can't break (or inject into) the shell.
+        env:
+          REL_TAG: ${{ github.event.release.tag_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            NAME="${{ github.event.inputs.version }}"
-          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            NAME="${GITHUB_REF_NAME#v}"
+          if [ -n "$REL_TAG" ]; then
+            TAG="$REL_TAG"                 # published from the website
+          elif [ -n "$INPUT_VERSION" ]; then
+            TAG="$INPUT_VERSION"           # typed into "Run workflow"
+          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG="$GITHUB_REF_NAME"         # pushed tag
           else
-            NAME="$(date -u +%Y.%m.%d)-$(echo $GITHUB_SHA | cut -c1-7)"
+            TAG="build-$GITHUB_RUN_NUMBER" # plain manual run
           fi
+          NAME="${TAG#v}"
           # Android refuses an update whose versionCode is lower than the one
           # installed, so it has to rise on every build. The run number does
           # that without needing any state kept between builds.
           CODE="${GITHUB_RUN_NUMBER}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
-          echo "Building $NAME (code $CODE)"
+          echo "Building $NAME as tag $TAG (code $CODE)"
 
       - name: Prepare signing key
         id: signing
@@ -110,7 +164,9 @@ jobs:
       - name: Publish the release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', steps.ver.outputs.code) }}
+          # An existing tag means the APK is attached to that release rather
+          # than a new one being made alongside it.
+          tag_name: ${{ steps.ver.outputs.tag }}
           name: Music Archive ${{ steps.ver.outputs.name }}
           files: ${{ steps.apk.outputs.path }}
           draft: false
