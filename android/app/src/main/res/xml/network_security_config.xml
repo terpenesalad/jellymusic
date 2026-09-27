@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Jellyfin on a home LAN is almost always plain http, and a browser
+         refuses to let an https page talk to it at all (mixed content). That
+         is a genuine limitation of running this as a website, and one of the
+         things the wrapper exists to remove.
+
+         Network Security Config matches hostnames, not IP ranges, so there is
+         no way to scope this to "private addresses only" — it's all cleartext
+         or none. Since the app only ever loads your own site and your own
+         server, all is the right call here.
+
+         User-installed CAs are trusted as well so a self-signed https cert
+         works once you've installed it on the phone. -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

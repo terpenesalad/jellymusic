@@ -1,0 +1,13 @@
+# Signing material — must never land in a public repo. Upload the base64 to
+# GitHub Actions secrets instead (see README-ANDROID.md).
+release.jks
+keystore.base64.txt
+KEYSTORE-PASSWORD.txt
+
+# Build output
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+tools/test/node_modules/
+tools/test/index.html

@@ -1,0 +1,130 @@
+name: Build APK
+
+# Tagging a release is the normal route:
+#     git tag v1.0.0 && git push --tags
+# The manual "Run workflow" button works too, for a one-off build.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version name (e.g. 1.0.3). Defaults to a dated build.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write        # needed to create the release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Work out the version
+        id: ver
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            NAME="${{ github.event.inputs.version }}"
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            NAME="${GITHUB_REF_NAME#v}"
+          else
+            NAME="$(date -u +%Y.%m.%d)-$(echo $GITHUB_SHA | cut -c1-7)"
+          fi
+          # Android refuses an update whose versionCode is lower than the one
+          # installed, so it has to rise on every build. The run number does
+          # that without needing any state kept between builds.
+          CODE="${GITHUB_RUN_NUMBER}"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Building $NAME (code $CODE)"
+
+      - name: Prepare signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          KS="$RUNNER_TEMP/keys/release.jks"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$KS"
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+            echo "Using the keystore from repository secrets."
+          else
+            # No secret configured: generate a throwaway key so the build still
+            # produces an installable APK. The catch is that the signature
+            # differs every run, so Android treats each build as a different
+            # app and refuses to install it over the last one. Fine for a first
+            # try, worth fixing before you rely on it.
+            keytool -genkeypair -v -keystore "$KS" \
+              -alias musicarchive -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass temporary -keypass temporary \
+              -dname "CN=Music Archive, OU=Personal, O=Music Archive, C=AU"
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No KEYSTORE_BASE64 secret set — signing with a throwaway key. Updates will not install over a previous build."
+          fi
+          echo "path=$KS" >> "$GITHUB_OUTPUT"
+
+      - name: Build release APK
+        working-directory: android
+        env:
+          KEYSTORE_PATH: ${{ steps.signing.outputs.path }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'temporary' }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'musicarchive' }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'temporary' }}
+        run: |
+          gradle assembleRelease --no-daemon --stacktrace \
+            -PappVersionName="${{ steps.ver.outputs.name }}" \
+            -PappVersionCode="${{ steps.ver.outputs.code }}"
+
+      - name: Rename the APK
+        id: apk
+        run: |
+          SRC=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -z "$SRC" ]; then echo "No APK produced"; exit 1; fi
+          DEST="MusicArchive-${{ steps.ver.outputs.name }}.apk"
+          cp "$SRC" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+          ls -lh "$DEST"
+
+      - name: Upload as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MusicArchive-apk
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 90
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', steps.ver.outputs.code) }}
+          name: Music Archive ${{ steps.ver.outputs.name }}
+          files: ${{ steps.apk.outputs.path }}
+          draft: false
+          prerelease: false
+          body: |
+            **Music Archive ${{ steps.ver.outputs.name }}**
+
+            Download the `.apk` below on your phone and open it to install.
+            Android will ask you to allow installing from your browser the
+            first time — that's expected for an app that doesn't come from
+            the Play Store.
+
+            ${{ steps.signing.outputs.stable == 'false' && '> ⚠️ Signed with a throwaway key because no `KEYSTORE_BASE64` secret is set, so this build will not install over a previous one. See the README to fix that.' || '' }}
+
+            The app loads the live site, so day-to-day changes to `index.html`
+            show up without reinstalling. You only need a new APK when the
+            native side changes.

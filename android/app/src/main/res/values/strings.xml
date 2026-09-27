@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Music Archive</string>
+    <string name="channel_playback">Playback</string>
+    <string name="notif_prev">Previous</string>
+    <string name="notif_play">Play</string>
+    <string name="notif_pause">Pause</string>
+    <string name="notif_next">Next</string>
+</resources>

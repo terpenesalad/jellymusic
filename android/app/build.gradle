@@ -1,0 +1,77 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.terpenesalad.jellymusic'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "io.github.terpenesalad.jellymusic"
+        // 26 (Android 8) lets the whole app use notification channels and the
+        // modern foreground-service APIs with no legacy branches. Anything
+        // older than that can't run a media app well anyway.
+        minSdk 26
+        targetSdk 35
+
+        // Overridden by CI so each release gets a monotonically increasing
+        // versionCode — Android refuses to install an update whose code is
+        // lower than the installed one.
+        versionCode project.hasProperty('appVersionCode') ? appVersionCode.toInteger() : 1
+        versionName project.hasProperty('appVersionName') ? appVersionName : "dev"
+
+        buildConfigField "String", "APP_URL", "\"${project.property('appUrl')}\""
+    }
+
+    signingConfigs {
+        release {
+            // Populated from environment variables by CI. Falls back to the
+            // debug keystore for a plain local `gradle assembleRelease`.
+            def storePath = System.getenv("KEYSTORE_PATH")
+            if (storePath) {
+                storeFile file(storePath)
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // Left unshrunk on purpose. The app is a few hundred lines around
+            // a WebView; shrinking saves almost nothing and adds a class of
+            // failure (stripped bridge methods) that only shows up at runtime.
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig System.getenv("KEYSTORE_PATH") ? signingConfigs.release : signingConfigs.debug
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/*.version', 'META-INF/proguard/*', 'DebugProbesKt.bin']
+        }
+    }
+}
+
+dependencies {
+    // MediaSessionCompat + the media-style notification. Deliberately the only
+    // real dependencies: fewer moving parts, faster builds, less to break.
+    implementation 'androidx.media:media:1.7.0'
+    implementation 'androidx.core:core:1.13.1'
+}
