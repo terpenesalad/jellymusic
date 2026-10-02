@@ -172,7 +172,11 @@
     .player-vol svg{width:18px;height:18px;color:var(--text3);flex-shrink:0;}
     /* Title and controls stay tucked under the art; any spare height sits
        above the bottom icon row. */
-    .player-gap{flex:1 1 0;min-height:8px;}
+    .player-gap{flex:1 1 0;min-height:8px;display:flex;align-items:center;justify-content:center;}
+    .player-close-btn{width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.07);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+    .player-close-btn svg{width:20px;height:20px;}
+    .player-close-btn:active{background:rgba(255,255,255,.14);}
+    .ba-step:disabled{opacity:.3;pointer-events:none;}
     .player-gap.bottom{flex:0 0 22px;min-height:0;}
     .player-util{display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;flex-shrink:0;}
     .util-btn{background:none;border:none;color:var(--text2);height:42px;min-width:42px;padding:0 9px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:21px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:color .15s,background .15s;}
@@ -1089,7 +1093,7 @@
         <div class="vol-track" id="vol-track"><div class="vol-track-inner"><div class="vol-fill" id="vol-fill"></div></div><div class="vol-knob" id="vol-knob" style="left:75%;"></div></div>
         <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
       </div>
-      <div class="player-gap"></div>
+      <div class="player-gap"><button class="player-close-btn" onclick="closePlayer()" aria-label="Close player"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg></button></div>
       <div class="player-util">
         <button id="player-cast-btn" class="cast-btn util-btn" onclick="showDevicesPicker()" title="Devices" aria-label="Devices">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-6M3 12a8 8 0 018 8M3 16a4 4 0 014 4M5 20a1 1 0 100-2 1 1 0 000 2z"/></svg>
@@ -2121,11 +2125,9 @@ function renderBangerAlbumsShelf(keepPage){
   const PAGE=24;
   if(!keepPage)_bangerAlbumPage=0;
   const pages=Math.max(1,Math.ceil(ranked.length/PAGE));
-  _bangerAlbumPage=((_bangerAlbumPage%pages)+pages)%pages;
+  _bangerAlbumPage=Math.min(Math.max(0,_bangerAlbumPage),pages-1);
   const start=_bangerAlbumPage*PAGE;
-  let page=ranked.slice(start,start+PAGE);
-  // Wrap around so the last page is always full when the list is long enough.
-  if(page.length<PAGE&&ranked.length>PAGE)page=page.concat(ranked.slice(0,PAGE-page.length));
+  const page=ranked.slice(start,start+PAGE);
   shelf.classList.add('shelf-2row');shelf.classList.remove('shelf');
   shelf.innerHTML='';
   page.forEach(row=>{
@@ -2146,7 +2148,22 @@ function renderBangerAlbumsShelf(keepPage){
     c.append(wrap,nm,sb);shelf.appendChild(c);
   });
   const cnt=document.getElementById('h-bangeralbums-count');
-  if(cnt)cnt.textContent=pages>1?`${_bangerAlbumPage+1}/${pages}`:'';
+  if(cnt)cnt.textContent=pages>1?`${start+1}–${start+page.length} of ${ranked.length}`:'';
+  const pv=document.getElementById('h-bangeralbums-prev'),nx=document.getElementById('h-bangeralbums-next');
+  if(pv){pv.style.display=pages>1?'':'none';pv.disabled=_bangerAlbumPage===0;}
+  if(nx){nx.style.display=pages>1?'':'none';nx.disabled=_bangerAlbumPage>=pages-1;}
+  // Each new page starts at its first (highest-ranked) album.
+  shelf.scrollLeft=0;
+}
+function stepBangerAlbums(dir){
+  const pages=Math.max(1,Math.ceil(computeBangerAlbums().length/24));
+  const next=_bangerAlbumPage+dir;
+  if(next<0||next>=pages)return;
+  _bangerAlbumPage=next;
+  const shelf=document.getElementById('h-bangeralbums-shelf');
+  if(!shelf){renderBangerAlbumsShelf(true);return;}
+  shelf.style.opacity='0.4';
+  setTimeout(()=>{renderBangerAlbumsShelf(true);shelf.style.opacity='1';},120);
 }
 function shuffleBangerAlbums(btn){
   if(btn){btn.classList.add('spinning');setTimeout(()=>btn.classList.remove('spinning'),600);}
@@ -4881,8 +4898,8 @@ async function loadHome(retries=3){
     renderOnRepeatShelf();
 
     // ── BANGER ALBUMS ──────────────────────────────────────────────────
-    // Two rows, ranked by the share of the album you've flagged. The refresh
-    // button pages through the rest of the ranking.
+    // Two rows, ranked by the share of the album you've flagged. The arrows
+    // page up and down the ranking.
     const baHead=document.createElement('div');
     baHead.className='section-head';baHead.id='h-bangeralbums-head';baHead.style.display='none';
     baHead.innerHTML='<span class="section-title">Banger Albums</span>';
@@ -4891,13 +4908,18 @@ async function loadHome(retries=3){
     const baCount=document.createElement('span');
     baCount.id='h-bangeralbums-count';
     baCount.style.cssText='font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;';
-    const baRefresh=document.createElement('button');
-    baRefresh.className='section-refresh-btn';
-    baRefresh.title='More banger albums';
-    baRefresh.setAttribute('aria-label','More banger albums');
-    baRefresh.innerHTML='<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
-    baRefresh.onclick=(e)=>{e.stopPropagation();shuffleBangerAlbums(baRefresh);};
-    baActions.append(baCount,baRefresh);
+    // ‹ › step through the ranking: left = higher rated, right = lower.
+    const mkStep=(dir,label,path)=>{
+      const b=document.createElement('button');
+      b.className='section-refresh-btn ba-step';b.id=`h-bangeralbums-${dir<0?'prev':'next'}`;
+      b.title=label;b.setAttribute('aria-label',label);
+      b.innerHTML=`<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6"><path stroke-linecap="round" stroke-linejoin="round" d="${path}"/></svg>`;
+      b.onclick=e=>{e.stopPropagation();stepBangerAlbums(dir);};
+      return b;
+    };
+    const baPrev=mkStep(-1,'Higher rated albums','M15 18l-6-6 6-6');
+    const baNext=mkStep(1,'Lower rated albums','M9 18l6-6-6-6');
+    baActions.append(baPrev,baCount,baNext);
     baHead.appendChild(baActions);
     sec.appendChild(baHead);
     const baShelf=document.createElement('div');
