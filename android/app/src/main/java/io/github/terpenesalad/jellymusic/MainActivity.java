@@ -20,6 +20,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.graphics.Color;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.JsPromptResult;
@@ -35,6 +36,8 @@ import android.widget.Toast;
 
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import java.io.ByteArrayOutputStream;
@@ -57,6 +60,11 @@ public class MainActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
     private boolean keepingScreenOn = false;
 
+    // Last safe-area sizes in CSS px (== dp), handed to the page on every
+    // load and whenever they change.
+    private volatile int safeTopPx = 0;
+    private volatile int safeBottomPx = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,18 +73,35 @@ public class MainActivity extends Activity {
 
         web = new WebView(this);
 
-        // Android 15 forces edge-to-edge for apps targeting SDK 35, so the
-        // WebView would otherwise draw underneath the status bar and the
-        // gesture bar — the top of the page tucked behind the clock, the
-        // mini-player sitting under the nav bar. Insetting the container puts
-        // the page back in the same visible box it had in the browser.
+        // Full-bleed, like Spotify: the page draws all the way to the top and
+        // bottom edges of the glass, the status bar (clock, signal, battery) is
+        // hidden while the app is in front, and the gesture/nav bar floats
+        // transparently over the page's own bottom nav. The page is told how
+        // big the camera cutout and gesture area are (see pushSafeArea) so it
+        // can keep its controls clear of them without wasting any space.
+        enterImmersive();
+
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF0A0A0A);
         root.addView(web);
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-            return insets;
+            Insets cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout());
+            Insets nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            boolean imeOpen = insets.isVisible(WindowInsetsCompat.Type.ime());
+
+            // Edge-to-edge switches off adjustResize, so the keyboard has to
+            // be made room for by hand or it covers the search box.
+            v.setPadding(Math.max(cut.left, nav.left), 0,
+                    Math.max(cut.right, nav.right), imeOpen ? ime.bottom : 0);
+
+            // The status bar is hidden, so only the camera cutout counts at the
+            // top. A transient swipe-down overlays the page rather than
+            // shoving it around.
+            int top = cut.top;
+            int bottom = imeOpen ? 0 : Math.max(nav.bottom, cut.bottom);
+            pushSafeArea(top, bottom);
+            return WindowInsetsCompat.CONSUMED;
         });
         setContentView(root);
 
@@ -241,6 +266,7 @@ public class MainActivity extends Activity {
     }
 
     private void inject() {
+        applySafeAreaToPage();
         if (web == null || bridgeJs.isEmpty()) return;
         try {
             web.evaluateJavascript(bridgeJs, null);
@@ -264,6 +290,75 @@ public class MainActivity extends Activity {
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             }
         });
+    }
+
+    /** Hide the status bar, make the nav bar transparent, draw under both. */
+    private void enterImmersive() {
+        android.view.Window w = getWindow();
+        WindowCompat.setDecorFitsSystemWindows(w, false);
+        w.setStatusBarColor(Color.TRANSPARENT);
+        w.setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Otherwise Android paints a translucent scrim behind 3-button nav.
+            w.setNavigationBarContrastEnforced(false);
+            w.setStatusBarContrastEnforced(false);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            WindowManager.LayoutParams lp = w.getAttributes();
+            lp.layoutInDisplayCutoutMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    ? WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    : WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            w.setAttributes(lp);
+        }
+        WindowInsetsControllerCompat c = WindowCompat.getInsetsController(w, w.getDecorView());
+        c.setAppearanceLightStatusBars(false);
+        c.setAppearanceLightNavigationBars(false);
+        // A swipe from the top edge peeks the status bar, then it tucks away
+        // again on its own — same as a video player.
+        c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        c.hide(WindowInsetsCompat.Type.statusBars());
+    }
+
+    private void pushSafeArea(int topPx, int bottomPx) {
+        float d = getResources().getDisplayMetrics().density;
+        int t = Math.round(topPx / d);
+        int b = Math.round(bottomPx / d);
+        if (t == safeTopPx && b == safeBottomPx) return;
+        safeTopPx = t;
+        safeBottomPx = b;
+        applySafeAreaToPage();
+    }
+
+    /** Read by the page at startup, before any native push can land. */
+    String safeAreaJson() {
+        return "{\"top\":" + safeTopPx + ",\"bottom\":" + safeBottomPx + "}";
+    }
+
+    private void applySafeAreaToPage() {
+        if (web == null) return;
+        String js = "(function(r){if(!r)return;"
+                + "r.style.setProperty('--ma-safe-top','" + safeTopPx + "px');"
+                + "r.style.setProperty('--ma-safe-bottom','" + safeBottomPx + "px');"
+                + "r.classList.add('ma-app');})(document.documentElement)";
+        try {
+            web.evaluateJavascript(js, null);
+        } catch (Throwable t) {
+            Log.w(TAG, "safe-area push failed", t);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Dialogs, the share sheet and the notification shade can all bring
+        // the status bar back; put it away again whenever we're in front.
+        enterImmersive();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) enterImmersive();
     }
 
     private void showOfflinePage() {

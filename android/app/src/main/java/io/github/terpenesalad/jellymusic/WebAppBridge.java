@@ -18,6 +18,12 @@ public class WebAppBridge {
         this.activity = activity;
     }
 
+    /** Camera-cutout and gesture-bar sizes in CSS px, as JSON {top,bottom}. */
+    @JavascriptInterface
+    public String safeArea() {
+        return activity.safeAreaJson();
+    }
+
     /** Called when the track changes. */
     @JavascriptInterface
     public void setMetadata(String title, String artist, String album) {

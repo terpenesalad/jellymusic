@@ -8,11 +8,23 @@
   <meta name="apple-mobile-web-app-title" content="Music Archive">
   <meta name="theme-color" content="#0A0A0A">
   <title>Music Archive</title>
+  <script>
+  // Android app: the native shell draws edge-to-edge with the status bar
+  // hidden, and tells us how big the camera cutout and gesture bar are so the
+  // layout can hug the screen edges without anything landing under them.
+  (function(){try{
+    var h=window.MAHost;if(!h||typeof h.safeArea!=='function')return;
+    var a=JSON.parse(h.safeArea()||'{}'),r=document.documentElement;
+    r.classList.add('ma-app');
+    r.style.setProperty('--ma-safe-top',(+a.top||0)+'px');
+    r.style.setProperty('--ma-safe-bottom',(+a.bottom||0)+'px');
+  }catch(e){}})();
+  </script>
   <link rel="manifest" id="pwa-manifest" href="./manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#0A0A0A;--bg2:#111;--bg3:#181818;--bg4:#282828;--bg5:#333;--accent:#E8B84B;--text:#FFF;--text2:#B3B3B3;--text3:#6B6B6B;--nav-h:64px;--mini-h:72px;--safe-b:env(safe-area-inset-bottom,0px);}
+    :root{--bg:#0A0A0A;--bg2:#111;--bg3:#181818;--bg4:#282828;--bg5:#333;--accent:#E8B84B;--text:#FFF;--text2:#B3B3B3;--text3:#6B6B6B;--nav-h:64px;--mini-h:72px;--safe-t:var(--ma-safe-top,env(safe-area-inset-top,0px));--safe-b:var(--ma-safe-bottom,env(safe-area-inset-bottom,0px));}
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;scrollbar-width:none;}
     *::-webkit-scrollbar{display:none;}
     html,body{height:100%;overflow:hidden;overscroll-behavior:none;}
@@ -86,7 +98,7 @@
     #view-player{z-index:200;background:var(--bg);transform:translateY(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);display:flex;}
     #view-player.open{transform:translateY(0);}
     .player-bg{position:absolute;inset:0;opacity:.2;background-size:cover;background-position:center;filter:blur(70px) saturate(1.5);}
-    .player-inner{position:relative;z-index:1;display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;}
+    .player-inner{position:relative;z-index:1;display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;padding-top:var(--safe-t);padding-bottom:var(--safe-b);}
     .player-drag-handle{width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:14px auto 0;flex-shrink:0;cursor:pointer;}
     .player-header{display:flex;align-items:center;padding:10px 16px 6px;gap:10px;flex-shrink:0;}
     .player-down-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;align-items:center;}
@@ -185,7 +197,7 @@
     .q-dur{font-size:12px;color:var(--text3);}
 
     /* RADIO */
-    .radio-top{padding:52px 16px 12px;display:flex;align-items:center;justify-content:space-between;}
+    .radio-top{padding:calc(var(--safe-t) + 16px) 16px 12px;display:flex;align-items:center;justify-content:space-between;}
     .radio-heading{font-size:22px;font-weight:800;}
     .radio-add-btn{background:none;border:1.5px solid var(--bg5);border-radius:50px;padding:7px 14px;font-family:inherit;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px;}
     .radio-add-btn svg{width:14px;height:14px;}
@@ -245,7 +257,7 @@
 
 
     /* HOME */
-    .home-top{padding:56px 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .home-top{padding:calc(var(--safe-t) + 16px) 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
     .home-greeting{font-size:22px;font-weight:800;letter-spacing:-.3px;}
     .home-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#000;cursor:pointer;text-transform:uppercase;flex-shrink:0;}
     .quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px 16px 20px;}
@@ -360,7 +372,7 @@
     .skel-line.short{width:70%;}
     @keyframes shimmer{0%,100%{opacity:.5}50%{opacity:1}}
 
-    .search-top{padding:52px 16px 12px;}
+    .search-top{padding:calc(var(--safe-t) + 16px) 16px 12px;}
     .search-title{font-size:22px;font-weight:800;margin-bottom:12px;}
     .search-box{background:var(--text);border-radius:8px;display:flex;align-items:center;padding:0 12px;gap:8px;}
     .search-box svg{width:18px;height:18px;color:#555;flex-shrink:0;}
@@ -371,7 +383,7 @@
     .genre-pill-name{font-size:15px;font-weight:800;}
 
     /* LIBRARY */
-    .lib-top{padding:52px 16px 0;}
+    .lib-top{padding:calc(var(--safe-t) + 16px) 16px 0;}
     .lib-top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
     .lib-heading{font-size:22px;font-weight:800;}
     .lib-filter-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;}
@@ -413,7 +425,7 @@
     .detail-hero{position:relative;padding:0 20px 20px;min-height:260px;display:flex;flex-direction:column;justify-content:flex-end;}
     .detail-hero-bg{position:absolute;inset:0;background-size:cover;background-position:center top;}
     .detail-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(0,0,0,.65) 55%,var(--bg) 100%);}
-    .detail-back{position:absolute;top:52px;left:16px;background:rgba(0,0,0,.55);border:none;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent);backdrop-filter:blur(8px);z-index:20;}
+    .detail-back{position:absolute;top:calc(var(--safe-t) + 12px);left:16px;background:rgba(0,0,0,.55);border:none;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent);backdrop-filter:blur(8px);z-index:20;}
     .detail-back svg{width:20px;height:20px;}
     .detail-art-float{width:180px;height:180px;border-radius:10px;object-fit:cover;background:var(--bg4);display:block;margin:90px auto 16px;box-shadow:0 12px 40px rgba(0,0,0,.7);position:relative;z-index:2;}
     .detail-art-float.circle{border-radius:50%;}
@@ -479,7 +491,7 @@
     .eq span:nth-child(3){animation:eq3 .8s ease-in-out infinite;animation-delay:.3s;}
 
     /* DRIVING MODE */
-    #driving-overlay{position:fixed;inset:0;background:#000;z-index:800;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:60px 24px calc(var(--safe-b) + 40px);}
+    #driving-overlay{position:fixed;inset:0;background:#000;z-index:800;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(var(--safe-t) + 40px) 24px calc(var(--safe-b) + 40px);}
     #driving-overlay.active{display:flex;}
     .drive-header{width:100%;display:flex;justify-content:flex-end;}
     .drive-exit{background:rgba(255,255,255,.1);border:none;border-radius:50px;padding:10px 20px;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
@@ -868,7 +880,7 @@
 <!-- HOME -->
 <div id="view-home" class="view has-player">
   <div class="scroll-area">
-    <div class="home-top" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:56px 16px 8px;">
+    <div class="home-top" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <div style="min-width:0;flex:1;"><div class="home-greeting" id="home-greeting">Good evening</div><div class="home-datetime" id="home-datetime" style="font-size:11px;font-weight:700;letter-spacing:1.2px;color:var(--text3);margin-top:4px;text-transform:uppercase;"></div></div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto;">
         <button id="home-cast-btn" class="cast-btn" onclick="showDevicesPicker()" title="Devices" aria-label="Devices">
@@ -1511,6 +1523,7 @@ let _deferredInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',(e)=>{
   e.preventDefault();
   _deferredInstallPrompt=e;
+  if(window.MAHost)return; // already the installed app
   const btn=document.getElementById('home-install-btn');
   if(btn){btn.style.display='inline-flex';btn.dataset.ready='1';}
 });
@@ -1530,7 +1543,7 @@ window.addEventListener('appinstalled',()=>{
 function showInstallButtonIfNeeded(){
   const btn=document.getElementById('home-install-btn');
   if(!btn)return;
-  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone||!!window.MAHost;
   btn.style.display=isStandalone?'none':'inline-flex';
 }
 
@@ -3403,7 +3416,7 @@ function showBgDownloadIndicator(){
   const el=document.createElement('div');
   el.id='bg-dl-indicator';
   el.style.cssText=`
-    position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);
+    position:fixed;top:calc(var(--safe-t) + 12px);left:50%;transform:translateX(-50%);
     background:rgba(20,20,20,.95);backdrop-filter:blur(10px);
     color:var(--text);border:1px solid rgba(232,184,75,.4);
     border-radius:50px;padding:8px 16px;font-size:12px;font-weight:700;
