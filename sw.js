@@ -3,7 +3,7 @@
    https://terpenesalad.github.io/jellymusic/sw.js
    Bump CACHE_VERSION whenever you change index.html to force an update. */
 
-const CACHE_VERSION = 'ma-v7';
+const CACHE_VERSION = 'ma-v8';
 const APP_SHELL = [
   './',
   './index.html',

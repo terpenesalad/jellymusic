@@ -99,8 +99,8 @@
     #view-player.open{transform:translateY(0);}
     .player-bg{position:absolute;inset:0;opacity:.2;background-size:cover;background-position:center;filter:blur(70px) saturate(1.5);}
     .player-inner{position:relative;z-index:1;display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;padding-top:var(--safe-t);padding-bottom:var(--safe-b);}
-    .player-drag-handle{width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:8px auto 0;flex-shrink:0;cursor:pointer;}
-    .player-header{display:flex;align-items:center;padding:4px 14px 2px;gap:8px;flex-shrink:0;}
+    .player-drag-handle{display:none;}/* the chevron already closes the player */
+    .player-header{display:flex;align-items:center;padding:2px 14px 0;gap:8px;flex-shrink:0;}
     /* Equal-width sides keep the "Playing from" title dead centre. */
     .player-header-side{width:64px;flex-shrink:0;display:flex;align-items:center;}
     .player-header-side.right{justify-content:flex-end;}
@@ -113,14 +113,14 @@
     .player-ctx-name{font-size:13px;font-weight:600;margin-top:1px;}
     .player-header-btns{display:flex;gap:4px;flex-shrink:0;}
     .player-tab-row{display:flex;border-bottom:1px solid #1c1c1c;flex-shrink:0;margin:0 20px;}
-    .player-tab{flex:1;background:none;border:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--text3);padding:10px 0;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;}
+    .player-tab{flex:1;background:none;border:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--text3);padding:8px 0 9px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;}
     .player-tab.active{color:var(--text);border-bottom-color:var(--accent);}
     #player-np{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;}
     /* The artwork takes whatever height is left, so tall phones get a
        bigger cover instead of a band of empty space under the controls. */
     /* Artwork sits directly under the tabs at one fixed size per device
        (full width, capped on short screens) — every cover the same size. */
-    .player-art-wrap{flex:0 0 auto;padding:18px 24px 0;display:flex;justify-content:center;}
+    .player-art-wrap{flex:0 0 auto;padding:16px 24px 22px;display:flex;justify-content:center;}
     .player-art{width:min(100%,44vh);height:auto;aspect-ratio:1;border-radius:14px;object-fit:cover;background:var(--bg4);box-shadow:0 20px 60px rgba(0,0,0,.7);display:block;transition:transform .3s;}
     .player-art.playing{transform:scale(1.02);}
     .player-meta{padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
@@ -170,9 +170,9 @@
     .ctrl-play svg{width:30px;height:30px;color:#000;}
     .player-vol{padding:2px 24px 4px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
     .player-vol svg{width:18px;height:18px;color:var(--text3);flex-shrink:0;}
-    /* Spare height goes between the art and the title; the controls keep a
-       fixed lift off the gesture bar. */
-    .player-gap{flex:1 1 0;min-height:14px;}
+    /* Title and controls stay tucked under the art; any spare height sits
+       above the bottom icon row. */
+    .player-gap{flex:1 1 0;min-height:8px;}
     .player-gap.bottom{flex:0 0 22px;min-height:0;}
     .player-util{display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;flex-shrink:0;}
     .util-btn{background:none;border:none;color:var(--text2);height:42px;min-width:42px;padding:0 9px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:21px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:color .15s,background .15s;}
@@ -1068,7 +1068,6 @@
     </div>
     <div id="player-np">
       <div class="player-art-wrap"><img class="player-art" id="p-art" src="" alt="" playsinline></div>
-      <div class="player-gap"></div>
       <div class="player-meta">
         <div style="min-width:0;"><div class="player-track np-link" id="p-track" onclick="npGoAlbum()" role="link" title="Go to album">—</div><div class="player-artist np-link" id="p-artist" onclick="npGoArtist()" role="link" title="Go to artist">—</div><div class="player-album np-link" id="p-album" onclick="npGoAlbum()" role="link" title="Go to album" style="font-size:12px;color:var(--text3);margin-top:2px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;"></div></div>
         <button class="btn-banger-np" id="p-banger" onclick="toggleCurrentTrackBanger()" title="Mark as banger" aria-label="Mark as banger"></button>
@@ -1090,6 +1089,7 @@
         <div class="vol-track" id="vol-track"><div class="vol-track-inner"><div class="vol-fill" id="vol-fill"></div></div><div class="vol-knob" id="vol-knob" style="left:75%;"></div></div>
         <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
       </div>
+      <div class="player-gap"></div>
       <div class="player-util">
         <button id="player-cast-btn" class="cast-btn util-btn" onclick="showDevicesPicker()" title="Devices" aria-label="Devices">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-6M3 12a8 8 0 018 8M3 16a4 4 0 014 4M5 20a1 1 0 100-2 1 1 0 000 2z"/></svg>
