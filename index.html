@@ -1528,8 +1528,7 @@ let _deferredInstallPrompt=null;
         if(nw.state==='activated'&&navigator.serviceWorker.controller){
           if(!sessionStorage.getItem('ma_sw_reloaded')){
             sessionStorage.setItem('ma_sw_reloaded','1');
-            try{showToast&&showToast('Updated — reloading');}catch(_){}
-            location.reload();
+            reloadForUpdate();
           }
         }
       });
@@ -1539,7 +1538,37 @@ let _deferredInstallPrompt=null;
     navigator.serviceWorker.addEventListener&&navigator.serviceWorker.addEventListener('controllerchange',()=>{
       if(sessionStorage.getItem('ma_sw_reloaded'))return;
       sessionStorage.setItem('ma_sw_reloaded','1');
-      location.reload();
+      reloadForUpdate();
+    });
+    // The app mostly lives in the background rather than being closed, so
+    // checking only at launch meant updates could sit unseen for days.
+    // Check again whenever it comes back to the front.
+    let lastCheck=Date.now();
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState!=='visible'||Date.now()-lastCheck<60000)return;
+      lastCheck=Date.now();
+      try{sessionStorage.removeItem('ma_sw_reloaded');}catch(_){}
+      try{reg.update();}catch(_){}
+    });
+  }
+  /* Swap to the new build — but never cut off a song to do it. If music is
+     playing, wait for the next time it's paused (the queue and position are
+     saved, so the reload picks up exactly where you were). */
+  let _updatePending=false;
+  function reloadForUpdate(){
+    let a=null;try{a=audio;}catch(_){}
+    if(!a||a.paused){try{showToast&&showToast('Updated — reloading');}catch(_){}setTimeout(()=>location.reload(),400);return;}
+    if(_updatePending)return;
+    _updatePending=true;
+    try{showToast&&showToast('Update ready — applies next time you pause');}catch(_){}
+    a.addEventListener('pause',function onPause(){
+      // A track change pauses for an instant; only act on a real pause.
+      setTimeout(()=>{
+        if(!a.paused)return;
+        a.removeEventListener('pause',onPause);
+        try{savePlaybackState&&savePlaybackState();}catch(_){}
+        location.reload();
+      },1500);
     });
   }
 

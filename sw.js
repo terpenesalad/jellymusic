@@ -3,7 +3,7 @@
    https://terpenesalad.github.io/jellymusic/sw.js
    Bump CACHE_VERSION whenever you change index.html to force an update. */
 
-const CACHE_VERSION = 'ma-v9';
+const CACHE_VERSION = 'ma-v10';
 const APP_SHELL = [
   './',
   './index.html',
@@ -23,7 +23,9 @@ const NETWORK_TIMEOUT = 3000;
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((c) => c.addAll(APP_SHELL))
+      // cache:'reload' — fetch from GitHub, not the phone's HTTP cache, so a
+      // new worker never bakes in the previous build.
+      .then((c) => c.addAll(APP_SHELL.map((u) => new Request(u, { cache: 'reload' }))))
       .catch(() => {}) // don't fail install if an icon 404s
       .then(() => self.skipWaiting())
   );
@@ -56,7 +58,12 @@ function networkFirst(req) {
       caches.match(req).then((m) => { if (m) finish(m); });
     }, NETWORK_TIMEOUT);
 
-    fetch(req)
+    // GitHub Pages marks files cacheable for 10 minutes, which made a fresh
+    // push invisible for that long. For the app's own files, always check
+    // with the server first (a cheap 304 when nothing changed).
+    const fresh = (req.mode === 'navigate' || /\.(html|js|webmanifest)$|\/$/.test(new URL(req.url).pathname))
+      ? new Request(req, { cache: 'no-cache' }) : req;
+    fetch(fresh)
       .then((res) => {
         clearTimeout(timer);
         // Only cache real, complete, same-origin successes. Caching opaque or
