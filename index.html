@@ -99,8 +99,13 @@
     #view-player.open{transform:translateY(0);}
     .player-bg{position:absolute;inset:0;opacity:.2;background-size:cover;background-position:center;filter:blur(70px) saturate(1.5);}
     .player-inner{position:relative;z-index:1;display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;padding-top:var(--safe-t);padding-bottom:var(--safe-b);}
-    .player-drag-handle{width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:14px auto 0;flex-shrink:0;cursor:pointer;}
-    .player-header{display:flex;align-items:center;padding:10px 16px 6px;gap:10px;flex-shrink:0;}
+    .player-drag-handle{width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:8px auto 0;flex-shrink:0;cursor:pointer;}
+    .player-header{display:flex;align-items:center;padding:4px 14px 2px;gap:8px;flex-shrink:0;}
+    /* Equal-width sides keep the "Playing from" title dead centre. */
+    .player-header-side{width:64px;flex-shrink:0;display:flex;align-items:center;}
+    .player-header-side.right{justify-content:flex-end;}
+    .player-down-btn{width:40px;height:40px;justify-content:center;border-radius:50%;}
+    .player-down-btn:active{background:rgba(255,255,255,.08);}
     .player-down-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;align-items:center;}
     .player-down-btn svg{width:24px;height:24px;}
     .player-ctx{flex:1;text-align:center;}
@@ -110,9 +115,11 @@
     .player-tab-row{display:flex;border-bottom:1px solid #1c1c1c;flex-shrink:0;margin:0 20px;}
     .player-tab{flex:1;background:none;border:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--text3);padding:10px 0;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;}
     .player-tab.active{color:var(--text);border-bottom-color:var(--accent);}
-    #player-np{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
-    .player-art-wrap{padding:8px 28px 12px;flex-shrink:0;}
-    .player-art{width:100%;aspect-ratio:1;border-radius:14px;object-fit:cover;background:var(--bg4);box-shadow:0 20px 60px rgba(0,0,0,.7);display:block;transition:transform .3s;}
+    #player-np{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;}
+    /* The artwork takes whatever height is left, so tall phones get a
+       bigger cover instead of a band of empty space under the controls. */
+    .player-art-wrap{flex:1 1 auto;min-height:180px;padding:14px 24px 18px;display:flex;align-items:center;justify-content:center;container-type:size;}
+    .player-art{width:min(100cqw,100cqh);max-width:100%;max-height:100%;aspect-ratio:1;border-radius:14px;object-fit:cover;background:var(--bg4);box-shadow:0 20px 60px rgba(0,0,0,.7);display:block;transition:transform .3s;}
     .player-art.playing{transform:scale(1.02);}
     .player-meta{padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
     .player-track{font-size:21px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -129,7 +136,7 @@
     .btn-banger-np.on{color:var(--accent);}
     .btn-banger-np:active{transform:scale(.85);}
     .btn-banger-np svg{width:26px;height:26px;}
-    .progress-wrap{padding:16px 24px 8px;flex-shrink:0;}
+    .progress-wrap{padding:12px 24px 2px;flex-shrink:0;}
     .progress-track{width:100%;height:20px;cursor:pointer;position:relative;display:flex;align-items:center;touch-action:none;}
     .progress-track-inner{width:100%;height:4px;background:var(--bg5);border-radius:2px;position:relative;transition:height .15s;}
     .progress-track.dragging .progress-track-inner,.progress-track:active .progress-track-inner{height:6px;}
@@ -148,18 +155,32 @@
     .progress-track.dragging .progress-knob{transform:translateY(-50%) scale(1.25);}
     .progress-times{display:flex;justify-content:space-between;margin-top:6px;}
     .progress-times span{font-size:11px;font-weight:600;color:var(--text3);}
-    .player-controls{padding:4px 24px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-    .ctrl-side{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;display:flex;border-radius:50%;transition:color .15s;}
+    .player-controls{padding:6px 18px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .ctrl-side{background:none;border:none;color:var(--text2);cursor:pointer;padding:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:color .15s;position:relative;}
     .ctrl-side svg{width:24px;height:24px;}
+    .ctrl-side.on::after{content:"";position:absolute;bottom:3px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--accent);}
     .ctrl-side.on{color:var(--accent);}
-    .ctrl-prev,.ctrl-next{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;transition:opacity .15s;}
+    .ctrl-prev,.ctrl-next{background:none;border:none;color:var(--text);cursor:pointer;padding:0;width:52px;height:52px;align-items:center;justify-content:center;display:flex;transition:opacity .15s;}
     .ctrl-prev:active,.ctrl-next:active{opacity:.6;}
     .ctrl-prev svg,.ctrl-next svg{width:34px;height:34px;}
     .ctrl-play{background:var(--accent);border:none;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s;box-shadow:0 4px 20px rgba(232,184,75,.3);}
     .ctrl-play:active{transform:scale(.93);}
     .ctrl-play svg{width:30px;height:30px;color:#000;}
-    .player-vol{padding:0 24px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+    .player-vol{padding:2px 24px 4px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
     .player-vol svg{width:18px;height:18px;color:var(--text3);flex-shrink:0;}
+    .player-util{display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;flex-shrink:0;}
+    .util-btn{background:none;border:none;color:var(--text2);height:42px;min-width:42px;padding:0 9px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:21px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:color .15s,background .15s;}
+    .util-btn svg{width:22px;height:22px;flex-shrink:0;}
+    .util-btn:active{background:rgba(255,255,255,.08);}
+    .util-btn.util-text{font-size:14px;letter-spacing:-.2px;}
+    .util-label{display:none;}
+    #sleep-btn.on .util-label{display:inline;}
+    .player-util .cast-btn{width:auto;height:42px;border:none;background:none;border-radius:21px;padding:0 9px;}
+    .player-util .cast-btn svg{width:22px;height:22px;}
+    .player-util .cast-btn.active{color:var(--accent);background:none;}
+    .player-speed-wrap{padding:0 24px;flex-shrink:0;}
+    #speed-panel{padding:0 0 10px !important;}
+    #view-player.radio-mode .util-queue{display:none !important;}
     .vol-track{flex:1;height:20px;cursor:pointer;display:flex;align-items:center;touch-action:none;position:relative;}
     .vol-track-inner{width:100%;height:4px;background:var(--bg5);border-radius:2px;position:relative;transition:height .15s;}
     .vol-track.dragging .vol-track-inner,.vol-track:active .vol-track-inner{height:6px;}
@@ -378,6 +399,31 @@
     .search-box svg{width:18px;height:18px;color:#555;flex-shrink:0;}
     .search-box input{border:none;background:none;outline:none;font-family:inherit;font-size:15px;color:#000;padding:12px 0;width:100%;}
     .search-box input::placeholder{color:#888;}
+    .search-chips{display:flex;gap:8px;padding:2px 16px 6px;overflow-x:auto;}
+    .search-top-card{display:flex;align-items:center;gap:14px;margin:10px 16px 4px;padding:14px;background:var(--bg3);border-radius:12px;cursor:pointer;position:relative;}
+    .search-top-card:active{background:var(--bg4);}
+    .stc-art{width:84px;height:84px;border-radius:8px;object-fit:cover;background:var(--bg4);flex-shrink:0;box-shadow:0 6px 18px rgba(0,0,0,.45);}
+    .stc-art.circle{border-radius:50%;}
+    .stc-info{flex:1;min-width:0;}
+    .stc-name{font-size:20px;font-weight:800;letter-spacing:-.3px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .stc-sub{font-size:13px;color:var(--text2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .stc-kind{color:var(--text);font-weight:700;}
+    .stc-play{width:48px;height:48px;border-radius:50%;border:none;background:var(--accent);color:#000;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;box-shadow:0 4px 14px rgba(232,184,75,.3);}
+    .stc-play svg{width:24px;height:24px;margin-left:2px;}
+    .stc-play:active{transform:scale(.94);}
+    .search-more{display:block;margin:4px 16px 0;background:none;border:none;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;padding:8px 0;cursor:pointer;}
+    .recent-searches{padding:0 4px;}
+    .recent-row{display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;color:var(--text2);border-radius:8px;}
+    .recent-row:active{background:var(--bg3);}
+    .recent-row>svg{width:20px;height:20px;flex-shrink:0;color:var(--text3);}
+    .recent-row span{flex:1;font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .recent-row button{background:none;border:none;color:var(--text3);padding:6px;display:flex;cursor:pointer;}
+    .recent-row button svg{width:16px;height:16px;}
+    .genre-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 16px 16px;}
+    .genre-tile{position:relative;height:64px;border:none;border-radius:10px;color:#fff;font-family:inherit;font-size:15px;font-weight:800;text-align:left;padding:10px 40px 10px 14px;cursor:pointer;overflow:hidden;display:flex;align-items:flex-end;}
+    .genre-tile span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.2;}
+    .genre-tile svg{position:absolute;right:12px;top:50%;width:20px;height:20px;margin-top:-10px;opacity:.8;}
+    .genre-tile:active{filter:brightness(1.15);}
     .genres-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px 16px 16px;}
     .genre-pill{border-radius:10px;height:96px;display:flex;align-items:flex-end;padding:12px;cursor:pointer;}
     .genre-pill-name{font-size:15px;font-weight:800;}
@@ -491,20 +537,24 @@
     .eq span:nth-child(3){animation:eq3 .8s ease-in-out infinite;animation-delay:.3s;}
 
     /* DRIVING MODE */
-    #driving-overlay{position:fixed;inset:0;background:#000;z-index:800;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(var(--safe-t) + 40px) 24px calc(var(--safe-b) + 40px);}
+    #driving-overlay{position:fixed;inset:0;background:#000;z-index:800;display:none;flex-direction:column;align-items:center;justify-content:space-between;gap:20px;padding:calc(var(--safe-t) + 12px) 24px calc(var(--safe-b) + 28px);overflow:hidden;}
+    .drive-bg{position:absolute;inset:-40px;background-size:cover;background-position:center;filter:blur(60px) saturate(1.4) brightness(.45);z-index:0;}
+    #driving-overlay>*:not(.drive-bg){position:relative;z-index:1;}
     #driving-overlay.active{display:flex;}
-    .drive-header{width:100%;display:flex;justify-content:flex-end;}
-    .drive-exit{background:rgba(255,255,255,.1);border:none;border-radius:50px;padding:10px 20px;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
-    .drive-art{width:240px;height:240px;border-radius:20px;object-fit:cover;background:var(--bg4);box-shadow:0 20px 60px rgba(0,0,0,.8);}
-    .drive-info{text-align:center;}
-    .drive-title{font-size:26px;font-weight:900;letter-spacing:-.4px;margin-bottom:6px;}
-    .drive-artist{font-size:16px;color:var(--text2);font-weight:500;}
-    .drive-controls{display:flex;align-items:center;justify-content:center;gap:32px;width:100%;}
-    .drive-prev,.drive-next{background:rgba(255,255,255,.08);border:none;border-radius:50%;width:72px;height:72px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);}
-    .drive-prev svg,.drive-next svg{width:36px;height:36px;}
-    .drive-play{background:var(--accent);border:none;border-radius:50%;width:90px;height:90px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 30px rgba(232,184,75,.4);}
-    .drive-play svg{width:44px;height:44px;color:#000;}
-    .drive-progress{width:100%;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin-top:8px;}
+    .drive-header{width:100%;display:flex;justify-content:space-between;align-items:center;}
+    .drive-label{font-size:11px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:rgba(255,255,255,.6);}
+    .drive-exit{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:var(--text);cursor:pointer;}
+    .drive-exit svg{width:24px;height:24px;}
+    .drive-art{width:min(82vw,42vh);height:min(82vw,42vh);border-radius:18px;object-fit:cover;background:var(--bg4);box-shadow:0 20px 60px rgba(0,0,0,.8);}
+    .drive-info{text-align:center;width:100%;}
+    .drive-title{font-size:28px;font-weight:900;letter-spacing:-.5px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .drive-artist{font-size:17px;color:rgba(255,255,255,.75);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .drive-controls{display:flex;align-items:center;justify-content:space-evenly;width:100%;}
+    .drive-prev,.drive-next{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:84px;height:84px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);}
+    .drive-prev svg,.drive-next svg{width:40px;height:40px;}
+    .drive-play{background:var(--accent);border:none;border-radius:50%;width:108px;height:108px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 30px rgba(232,184,75,.4);}
+    .drive-play svg{width:52px;height:52px;color:#000;}
+    .drive-progress{width:100%;height:5px;background:rgba(255,255,255,.18);border-radius:3px;margin-top:8px;overflow:hidden;}
     .drive-prog-fill{height:100%;background:var(--accent);border-radius:2px;width:0%;}
 
     /* BOTTOM SHEET */
@@ -692,8 +742,8 @@
       #view-player.open{
         left:0;
       }
-      .player-art-wrap{padding:24px 0 16px;max-width:380px;margin:0 auto;}
-      .player-meta,.progress-wrap,.player-controls,.player-vol{
+      .player-art-wrap{padding:24px 0 16px;max-width:420px;width:100%;margin:0 auto;}
+      .player-meta,.progress-wrap,.player-controls,.player-vol,.player-util,.player-speed-wrap{
         max-width:580px;margin-left:auto;margin-right:auto;width:100%;
       }
       .player-tab-row{max-width:580px;margin:0 auto;}
@@ -918,7 +968,7 @@
       </div>
       <div class="search-box">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <input type="search" placeholder="Songs, artists, albums…" id="s-input" oninput="onSearchInput(this.value)">
+        <input type="search" placeholder="Songs, artists, albums, playlists…" id="s-input" oninput="onSearchInput(this.value)" onkeydown="onSearchKey(event)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
       </div>
     </div>
     <div id="search-body"></div>
@@ -992,15 +1042,12 @@
   <div class="player-inner">
     <div class="player-drag-handle" onclick="closePlayer()"></div>
     <div class="player-header">
-      <button class="player-down-btn" onclick="closePlayer()"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+      <div class="player-header-side">
+        <button class="player-down-btn" onclick="closePlayer()" aria-label="Close player"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+      </div>
       <div class="player-ctx"><div class="player-ctx-from" id="p-from">Playing from album</div><div class="player-ctx-name" id="p-ctx-name"></div></div>
-      <div class="player-header-btns">
-        <button id="player-cast-btn" class="cast-btn" onclick="showDevicesPicker()" title="Devices" aria-label="Devices">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-6M3 12a8 8 0 018 8M3 16a4 4 0 014 4M5 20a1 1 0 100-2 1 1 0 000 2z"/></svg>
-          <span class="cast-btn-dot"></span>
-        </button>
-        <button class="player-down-btn" onclick="enterDrivingMode()" title="Driving mode"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 0v4m0 14v-4m-7-7H2m20 0h-3M6.34 6.34l2.83 2.83m5.66 5.66l2.83 2.83M6.34 17.66l2.83-2.83m5.66-5.66l2.83-2.83"/></svg></button>
-        <button class="player-down-btn" onclick="showTrackSheet(S.track)"><svg fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
+      <div class="player-header-side right player-header-btns">
+        <button class="player-down-btn" onclick="showTrackSheet(S.track)" aria-label="More"><svg fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button>
       </div>
     </div>
     <div class="player-tab-row">
@@ -1025,24 +1072,28 @@
         <div class="progress-times"><span id="p-cur">0:00</span><span id="p-dur">0:00</span></div>
       </div>
       <div class="player-controls">
-        <button class="ctrl-side" id="ctrl-shuffle" onclick="toggleShuffle()"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h5l2 3h9M4 20h5l6-8M16.5 3.5L20 7l-3.5 3.5M16.5 16.5L20 20l-3.5 3.5"/></svg></button>
+        <button class="ctrl-side" id="ctrl-shuffle" onclick="toggleShuffle()" aria-label="Shuffle"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
         <button class="ctrl-prev" onclick="prevTrack()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
         <button class="ctrl-play" id="ctrl-play" onclick="togglePlay()"><svg viewBox="0 0 24 24" fill="currentColor" id="ctrl-play-icon"><path d="M8 5v14l11-7z"/></svg></button>
         <button class="ctrl-next" onclick="nextTrack()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
-        <button class="ctrl-side" id="ctrl-repeat" onclick="toggleRepeat()"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg></button>
+        <button class="ctrl-side" id="ctrl-repeat" onclick="toggleRepeat()" aria-label="Repeat"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
       </div>
       <div class="player-vol">
         <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
         <div class="vol-track" id="vol-track"><div class="vol-track-inner"><div class="vol-fill" id="vol-fill"></div></div><div class="vol-knob" id="vol-knob" style="left:75%;"></div></div>
         <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
       </div>
-      <div style="padding:0 24px 8px;">
-        <div style="display:flex;justify-content:center;gap:10px;">
-          <button id="speed-btn" onclick="toggleSpeedPanel()" style="background:var(--bg4);border:none;border-radius:50px;padding:6px 14px;font-family:inherit;font-size:12px;font-weight:800;color:var(--text2);cursor:pointer;min-width:60px;">1x</button>
-          <button id="sleep-btn" onclick="showSleepSheet()" title="Sleep timer" style="background:var(--bg4);border:none;border-radius:50px;padding:6px 14px;font-family:inherit;font-size:12px;font-weight:800;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px;">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg><span id="sleep-btn-label">Sleep</span>
-          </button>
-        </div>
+      <div class="player-util">
+        <button id="player-cast-btn" class="cast-btn util-btn" onclick="showDevicesPicker()" title="Devices" aria-label="Devices">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-6M3 12a8 8 0 018 8M3 16a4 4 0 014 4M5 20a1 1 0 100-2 1 1 0 000 2z"/></svg>
+          <span class="cast-btn-dot"></span>
+        </button>
+        <button id="speed-btn" class="util-btn util-text" onclick="toggleSpeedPanel()" aria-label="Playback speed">1x</button>
+        <button id="sleep-btn" class="util-btn" onclick="showSleepSheet()" title="Sleep timer" aria-label="Sleep timer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg><span id="sleep-btn-label" class="util-label">Sleep</span></button>
+        <button class="util-btn" onclick="enterDrivingMode()" title="Driving mode" aria-label="Driving mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></button>
+        <button class="util-btn util-queue" onclick="switchPlayerTab('queue')" title="Queue" aria-label="Queue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h12v2H3zm0 5h12v2H3zm0 5h8v2H3zm14-3v6.27A2.5 2.5 0 1 0 19 21.5V15h3v-2h-5z"/></svg></button>
+      </div>
+      <div class="player-speed-wrap">
         <div id="speed-panel" style="display:none;padding:10px 0 4px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:11px;color:var(--text3);font-weight:700;min-width:28px;">0.5x</span>
@@ -1052,18 +1103,13 @@
           <div style="text-align:center;margin-top:4px;"><button onclick="resetSpeed()" style="background:none;border:none;font-family:inherit;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;padding:4px 10px;">Reset</button></div>
         </div>
       </div>
-      <div style="display:flex;justify-content:center;padding:4px 0 calc(var(--safe-b) + 16px);">
-        <button onclick="closePlayer()" style="background:rgba(255,255,255,.08);border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-      </div>
     </div>
     <div id="player-queue">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 6px;">
         <div class="q-section-label" style="padding:0;">Queue · <span id="q-count">0</span> songs</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <button id="shuffle-queue-btn" onclick="reshuffleUpNext(this)" title="Shuffle up next" aria-label="Shuffle up next" style="background:none;border:1.5px solid var(--bg5);border-radius:50px;padding:5px 12px;font-family:inherit;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:5px;">
-            <svg id="shuffle-queue-icon" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h5l2 3h9M4 20h5l6-8M16.5 3.5L20 7l-3.5 3.5M16.5 16.5L20 20l-3.5 3.5"/></svg>
+            <svg id="shuffle-queue-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
             Shuffle
           </button>
           <button id="clear-queue-btn" onclick="clearQueueExceptCurrent()" style="background:none;border:1.5px solid var(--bg5);border-radius:50px;padding:5px 12px;font-family:inherit;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;letter-spacing:.5px;text-transform:uppercase;">Clear</button>
@@ -1079,7 +1125,8 @@
 
 <!-- DRIVING MODE -->
 <div id="driving-overlay">
-  <div class="drive-header"><button class="drive-exit" onclick="exitDrivingMode()">✕ Exit driving mode</button></div>
+  <div class="drive-bg" id="drive-bg"></div>
+  <div class="drive-header"><span class="drive-label">Driving mode</span><button class="drive-exit" onclick="exitDrivingMode()" aria-label="Exit driving mode"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <img class="drive-art" id="drive-art" src="" alt="">
   <div class="drive-info">
     <div class="drive-title" id="drive-title">—</div>
@@ -4045,7 +4092,9 @@ function updateDrivingUI(){
   if(!S.track)return;
   const artId=S.track.AlbumId||S.track.ParentId;
   const el=document.getElementById('drive-art');
-  if(artId)loadImg(el,artId,'Primary',400); else el.style.background=el.style.background||'linear-gradient(135deg,#2a1600,#1a1a2e)';
+  if(artId)loadImg(el,artId,'Primary',600); else el.style.background=el.style.background||'linear-gradient(135deg,#2a1600,#1a1a2e)';
+  const bg=document.getElementById('drive-bg');
+  if(bg){const pb=document.getElementById('player-bg');bg.style.backgroundImage=pb&&pb.style.backgroundImage?pb.style.backgroundImage:'';}
   document.getElementById('drive-title').textContent=S.track.Name||'—';
   document.getElementById('drive-artist').textContent=(S.track.Artists||[]).join(', ')||S.track.AlbumArtist||'—';
   const pp=audio.paused?'M8 5v14l11-7z':'M6 19h4V5H6v14zm8-14v14h4V5h-4z';
@@ -6367,65 +6416,19 @@ async function loadRecommendations(container,tracks,playlistId,attempt=0){
     // Use current playlist tracks to build exclusion set (keeps up-to-date after adds)
     const sourceTracks=S._currentPlaylistTracks||tracks;
     const existingIds=new Set(sourceTracks.map(t=>t.Id));
+    // The smart mix weighs the playlist's sound, genres, artists and era
+    // and spreads picks across artists; refresh rotates the seeds.
     let recs=[];
-
-    // Strategy 1: Match by genres - rotate which genres on each refresh
-    const allGenres=new Set();
-    sourceTracks.forEach(t=>{
-      (t.Genres||[]).forEach(g=>allGenres.add(g));
-      (t.GenreItems||[]).forEach(g=>allGenres.add(g.Name));
-    });
-    const genreArr=[...allGenres];
-    if(genreArr.length){
-      // Rotate starting point by attempt for variety on refresh
-      const start=(attempt*2)%Math.max(1,genreArr.length);
-      const picked=[];
-      for(let i=0;i<Math.min(3,genreArr.length);i++)picked.push(genreArr[(start+i)%genreArr.length]);
-      try{
-        const res=await api(`/Users/${S.uid}/Items`,{
-          IncludeItemTypes:'Audio',Recursive:true,Limit:40,
-          SortBy:'Random',Genres:picked.join('|'),
-          Fields:'RunTimeTicks,Artists,AlbumId',
-        });
-        recs=(res.Items||[]).filter(t=>!existingIds.has(t.Id));
-      }catch{}
-    }
-
-    // Strategy 2: Fallback - tracks by same artists (rotate on refresh)
+    try{recs=await SmartMix.forTracks(sourceTracks,{n:15,exclude:[...existingIds],attempt});}catch(e){}
     if(recs.length<5){
-      const artistIds=new Set();
-      sourceTracks.forEach(t=>(t.ArtistItems||[]).forEach(a=>artistIds.add(a.Id)));
-      if(artistIds.size){
-        const arr=[...artistIds];
-        const start=(attempt*3)%arr.length;
-        const picked=[];
-        for(let i=0;i<Math.min(5,arr.length);i++)picked.push(arr[(start+i)%arr.length]);
-        try{
-          const res=await api(`/Users/${S.uid}/Items`,{
-            IncludeItemTypes:'Audio',Recursive:true,Limit:30,
-            SortBy:'Random',ArtistIds:picked.join(','),
-            Fields:'RunTimeTicks,Artists,AlbumId',
-          });
-          const more=(res.Items||[]).filter(t=>!existingIds.has(t.Id)&&!recs.find(r=>r.Id===t.Id));
-          recs=recs.concat(more);
-        }catch{}
-      }
-    }
-
-    // Strategy 3: Random library tracks
-    if(recs.length<5){
+      // Thin library around this playlist — top up with random songs.
       try{
-        const res=await api(`/Users/${S.uid}/Items`,{
-          IncludeItemTypes:'Audio',Recursive:true,Limit:30,
-          SortBy:'Random',
-          Fields:'RunTimeTicks,Artists,AlbumId',
-        });
-        const more=(res.Items||[]).filter(t=>!existingIds.has(t.Id)&&!recs.find(r=>r.Id===t.Id));
-        recs=recs.concat(more);
+        const res=await api(`/Users/${S.uid}/Items`,{IncludeItemTypes:'Audio',Recursive:true,Limit:30,SortBy:'Random',Fields:'RunTimeTicks,Artists,AlbumId'});
+        const have=new Set(recs.map(r=>r.Id));
+        recs=recs.concat((res.Items||[]).filter(t=>!existingIds.has(t.Id)&&!have.has(t.Id)));
         if(recs.length>5)recsSub.textContent='You might also like';
       }catch{}
     }
-
     recs=recs.slice(0,15);
     if(!recs.length){recsDiv.remove();return;}
     recsList.innerHTML='';
@@ -6492,64 +6495,128 @@ function mkTrack(track,num,queue,ctxType,ctxName,ctxArtId){
 }
 
 /* ============================================================
-   SEARCH — fuzzy, typo-tolerant
+   SEARCH
+   ------------------------------------------------------------
+   * Forgiving: accents, punctuation and spacing don't matter
+     ("beyonce", "mm food", "acdc"), small typos are tolerated
+     ("flyng lotus"), and words can be split across fields
+     ("doom one beer" finds One Beer by MF DOOM).
+   * Ranked: exact and starts-with matches beat loose ones, and things you
+     actually play or marked as bangers float up.
+   * A top result, then filter chips for Songs / Artists / Albums /
+     Playlists so long result lists stay easy to scan.
+   * Tapping a song plays it with a matching radio behind it.
+   * Empty search shows recent searches and your genres to browse.
 ============================================================ */
-let _st;
+let _st,_searchSeq=0,_searchState=null,_searchFilter='all';
+const SEARCH_FIELDS='RunTimeTicks,Artists,ArtistItems,AlbumId,Album,AlbumArtist,ProductionYear,Genres,ChildCount';
+
 function onSearchInput(val){
-  clearTimeout(_st);const body=document.getElementById('search-body');
-  if(!val.trim()){body.innerHTML='';renderSearchBrowse();return;}
-  body.innerHTML='<div class="spinner"></div>';
-  _st=setTimeout(()=>doSearch(val),350);
+  clearTimeout(_st);
+  const body=document.getElementById('search-body');
+  if(!val.trim()){_searchSeq++;_searchState=null;body.innerHTML='';renderSearchBrowse();return;}
+  if(!_searchState)body.innerHTML='<div class="spinner"></div>';
+  _st=setTimeout(()=>doSearch(val),220);
+}
+function onSearchKey(e){
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const q=e.target.value.trim();
+    if(q){addRecentSearch(q);clearTimeout(_st);doSearch(q);}
+    e.target.blur();// drop the keyboard so the results are visible
+  }
 }
 
-/* Simple fuzzy match: check if query words appear in the target (order-independent, partial OK) */
-function fuzzyMatch(query,target){
-  const q=query.toLowerCase().replace(/[^a-z0-9 ]/g,'');
-  const t=target.toLowerCase().replace(/[^a-z0-9 ]/g,'');
-  if(t.includes(q))return 3;// exact substring match
-  const words=q.split(/\s+/).filter(w=>w.length>1);
-  if(!words.length)return 0;
-  let matched=0;
-  words.forEach(w=>{if(t.includes(w))matched++;});
-  if(matched===words.length)return 2;// all words found
-  if(matched>0)return 1;// some words found
-  // Check for single-character typo (distance=1) on each word
-  const tWords=t.split(/\s+/);
-  let closeMatch=0;
-  words.forEach(w=>{
-    if(tWords.some(tw=>levenshtein1(w,tw)))closeMatch++;
-  });
-  if(closeMatch>0)return 0.5;
+/* ── matching ── */
+function searchNorm(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/&/g,' and ').replace(/['’`]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+}
+const _stripThe=s=>s.replace(/^the /,'');
+function editDistance(a,b,max){
+  if(Math.abs(a.length-b.length)>max)return max+1;
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const cur=[i];let rowMin=i;
+    for(let j=1;j<=b.length;j++){
+      cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+      if(cur[j]<rowMin)rowMin=cur[j];
+    }
+    if(rowMin>max)return max+1;
+    prev=cur;
+  }
+  return prev[b.length];
+}
+// Kept for anything else that still calls the old helpers.
+function levenshtein1(a,b){return editDistance(a,b,1)<=1;}
+function fuzzyMatch(query,target){const s=matchText(searchNorm(query),searchNorm(target));return s>=95?3:s>=60?2:s>=40?1:s>0?0.5:0;}
+
+/* How well a normalised query matches a normalised name, 0..100. */
+function matchText(q,t){
+  if(!q||!t)return 0;
+  const qn=_stripThe(q),tn=_stripThe(t);
+  if(tn===qn)return 100;
+  const qc=qn.replace(/ /g,''),tc=tn.replace(/ /g,'');
+  if(tc===qc)return 96;
+  if(tn.startsWith(qn))return 88;
+  if(tc.startsWith(qc)&&qc.length>=3)return 84;
+  const tw=tn.split(' '),qw=qn.split(' ');
+  if(qw.every(w=>tw.some(x=>x.startsWith(w))))return 76;
+  if(tn.includes(qn)||(qc.length>=4&&tc.includes(qc)))return 66;
+  // Typos: every query word close to some word in the name.
+  let hit=0,close=0;
+  for(const w of qw){
+    if(tw.some(x=>x.startsWith(w)||x===w)){hit++;continue;}
+    const max=w.length>=8?2:w.length>=4?1:0;
+    if(max&&tw.some(x=>editDistance(w,x,max)<=max||(x.length>w.length&&editDistance(w,x.slice(0,w.length),max)<=max)))close++;
+  }
+  if(hit+close===qw.length)return close?56-8*(close-1):60;
   return 0;
 }
-
-/* Check if two strings differ by at most 1 edit (fast check) */
-function levenshtein1(a,b){
-  if(Math.abs(a.length-b.length)>1)return false;
-  if(a===b)return true;
-  let diffs=0;
-  if(a.length===b.length){
-    for(let i=0;i<a.length;i++){if(a[i]!==b[i])diffs++;if(diffs>1)return false;}
-    return diffs<=1;
+/* Score an item against the query using its name plus secondary fields
+   (artist, album) so "doom one beer" works. */
+function scoreItem(item,qn){
+  const name=searchNorm(item.Name);
+  let s=matchText(qn,name);
+  const extra=[...(item.Artists||[]),item.AlbumArtist,item.Album].filter(Boolean).map(searchNorm);
+  if(item.Type!=='MusicArtist'&&extra.length){
+    const words=_stripThe(qn).split(' ');
+    const hay=(name+' '+extra.join(' ')).split(' ');
+    const exact=words.every(w=>hay.some(x=>x.startsWith(w)));
+    const loose=exact||words.every(w=>hay.some(x=>x.startsWith(w)||(w.length>=5&&editDistance(w,x,1)<=1)));
+    if(words.length>1&&exact)s=Math.max(s,58);
+    else if(words.length>1&&loose)s=Math.max(s,44);
+    else if(!s){
+      // Searching an artist name should still surface their songs/albums.
+      const best=Math.max(...extra.map(e=>matchText(qn,e)));
+      if(best>=50)s=Math.min(52,best-10);
+    }
   }
-  // Different lengths — check for single insert/delete
-  const longer=a.length>b.length?a:b;
-  const shorter=a.length>b.length?b:a;
-  let j=0;
-  for(let i=0;i<longer.length;i++){
-    if(longer[i]!==shorter[j]){diffs++;if(diffs>1)return false;}
-    else j++;
-  }
-  return true;
+  if(!s)return 0;
+  // Personal boost: things you play or love rank higher among equals.
+  let boost=0;
+  const pc=(typeof playCounts==='function')?playCounts():{};
+  const plays=Math.max((pc[item.Id]&&pc[item.Id].c)||0,(item.UserData&&item.UserData.PlayCount)||0);
+  if(plays)boost+=Math.min(8,Math.log2(1+plays)*2);
+  try{if(item.Type==='Audio'&&isBanger(item.Id))boost+=5;}catch(e){}
+  if(item.UserData&&item.UserData.IsFavorite)boost+=3;
+  // Artists and albums win ties against songs with the same name.
+  if(item.Type==='MusicArtist')boost+=4;else if(item.Type==='MusicAlbum')boost+=2;
+  return s+boost;
 }
 
-/* ── RECENT SEARCHES ── */
+/* ── recents ── */
 function getRecentSearches(){try{return JSON.parse(localStorage.getItem('ma_searches')||'[]');}catch{return [];}}
 function addRecentSearch(q){
   q=(q||'').trim();if(q.length<2)return;
   const list=getRecentSearches().filter(s=>s.toLowerCase()!==q.toLowerCase());
   list.unshift(q);
-  try{localStorage.setItem('ma_searches',JSON.stringify(list.slice(0,10)));}catch(e){}
+  try{localStorage.setItem('ma_searches',JSON.stringify(list.slice(0,12)));}catch(e){}
+}
+function removeRecentSearch(q){
+  const list=getRecentSearches().filter(s=>s!==q);
+  try{localStorage.setItem('ma_searches',JSON.stringify(list));}catch(e){}
+  renderSearchBrowse();
 }
 function clearRecentSearches(){
   try{localStorage.removeItem('ma_searches');}catch(e){}
@@ -6559,63 +6626,173 @@ function searchFromRecent(q){
   const inp=document.getElementById('s-input');
   if(inp)inp.value=q;
   document.getElementById('search-body').innerHTML='<div class="spinner"></div>';
+  addRecentSearch(q);
   doSearch(q);
 }
-async function doSearch(q){
-  addRecentSearch(q);
-  const body=document.getElementById('search-body');
-  try{
-    // Strategy 1: Jellyfin server search (handles most cases)
-    const res=await api(`/Users/${S.uid}/Items`,{SearchTerm:q,IncludeItemTypes:'Audio,MusicAlbum,MusicArtist',Recursive:true,Limit:40,Fields:'RunTimeTicks,Artists,AlbumId,AlbumArtist'});
-    let songs=(res.Items||[]).filter(i=>i.Type==='Audio');
-    let albums=filterHiddenAlbums((res.Items||[]).filter(i=>i.Type==='MusicAlbum'));
-    let artists=(res.Items||[]).filter(i=>i.Type==='MusicArtist');
 
-    // Strategy 2: If results are sparse, also fuzzy-search the local cache
-    if((songs.length+albums.length+artists.length)<5&&S.cache.loaded){
-      const existingIds=new Set([...songs,...albums,...artists].map(i=>i.Id));
-      // Search cached albums
-      (S.cache.albums||[]).forEach(a=>{
-        if(existingIds.has(a.Id))return;
-        const score=fuzzyMatch(q,`${a.Name||''} ${a.AlbumArtist||''}`);
-        if(score>0){albums.push(a);existingIds.add(a.Id);}
-      });
-      // Search cached artists
-      (S.cache.artists||[]).forEach(a=>{
-        if(existingIds.has(a.Id))return;
-        const score=fuzzyMatch(q,a.Name||'');
-        if(score>0){artists.push(a);existingIds.add(a.Id);}
-      });
-    }
-
-    // Strategy 3: If still nothing, try splitting the query differently
-    if(!songs.length&&!albums.length&&!artists.length&&q.length>3){
-      // Try removing last character (common extra-letter typo)
-      const trimmed=q.slice(0,-1);
-      try{
-        const res2=await api(`/Users/${S.uid}/Items`,{SearchTerm:trimmed,IncludeItemTypes:'Audio,MusicAlbum,MusicArtist',Recursive:true,Limit:20,Fields:'RunTimeTicks,Artists,AlbumId,AlbumArtist'});
-        songs=(res2.Items||[]).filter(i=>i.Type==='Audio');
-        albums=(res2.Items||[]).filter(i=>i.Type==='MusicAlbum');
-        artists=(res2.Items||[]).filter(i=>i.Type==='MusicArtist');
-      }catch{}
-    }
-
-    body.innerHTML='';
-    if(!songs.length&&!albums.length&&!artists.length){
-      body.innerHTML=`<div class="empty" style="padding:60px 24px;line-height:1.6;">
-        <div style="font-size:16px;font-weight:700;color:var(--text2);margin-bottom:8px;">Nothing found</div>
-        <div style="font-size:13px;color:var(--text3);">Try spelling it differently — or text Kami to get "${esc(q)}" added to the library.</div>
-      </div>`;
-      return;
-    }
-    if(songs.length){body.appendChild(mkSH('Songs'));songs.slice(0,12).forEach((t,i)=>body.appendChild(mkTrack(t,i+1,songs,'Search',q)));}
-    if(albums.length){body.appendChild(mkSH('Albums',true));albums.slice(0,10).forEach(a=>{
-      const sub=[a.AlbumArtist,a.ProductionYear].filter(Boolean).join(' · ')||'Album';
-      body.appendChild(mkSRow(a,false,()=>openAlbum(a),sub));
-    });}
-    if(artists.length){body.appendChild(mkSH('Artists',true));artists.slice(0,8).forEach(a=>body.appendChild(mkSRow(a,true,()=>openArtist(a),'Artist')));}
-  }catch{body.innerHTML='<div class="empty">Search failed</div>';}
+/* ── fetching ── */
+async function _searchApi(params){
+  try{const r=await api(`/Users/${S.uid}/Items`,Object.assign({Recursive:true,Fields:SEARCH_FIELDS,EnableUserData:true},params));return r.Items||[];}
+  catch(e){return [];}
 }
+async function doSearch(q){
+  q=String(q||'').trim();
+  if(!q)return;
+  const seq=++_searchSeq;
+  const qn=searchNorm(q);
+  const words=_stripThe(qn).split(' ').filter(Boolean);
+  const reqs=[
+    _searchApi({SearchTerm:q,IncludeItemTypes:'Audio',Limit:60}),
+    _searchApi({SearchTerm:q,IncludeItemTypes:'MusicAlbum',Limit:30}),
+    _searchApi({SearchTerm:q,IncludeItemTypes:'MusicArtist',Limit:20}),
+    _searchApi({SearchTerm:q,IncludeItemTypes:'Playlist',Limit:12}),
+  ];
+  // Multi-word: also search the most distinctive words on their own and let
+  // the scorer require every word somewhere in title/artist/album.
+  if(words.length>1){
+    words.filter(w=>w.length>=3).sort((a,b)=>b.length-a.length).slice(0,2).forEach(w=>{
+      reqs.push(_searchApi({SearchTerm:w,IncludeItemTypes:'Audio,MusicAlbum',Limit:80}));
+    });
+  }
+  let lists=await Promise.all(reqs);
+  if(seq!==_searchSeq)return;// a newer search has started
+  let all=dedupeById(lists.flat());
+
+  // Local, typo-tolerant pass over the cached library (albums + artists).
+  if(S.cache&&S.cache.loaded){
+    const have=new Set(all.map(i=>i.Id));
+    for(const a of (S.cache.albums||[]))if(!have.has(a.Id)&&scoreItem(Object.assign({Type:'MusicAlbum'},a),qn)>=40){all.push(Object.assign({Type:'MusicAlbum'},a));have.add(a.Id);}
+    for(const a of (S.cache.artists||[]))if(!have.has(a.Id)&&scoreItem(Object.assign({Type:'MusicArtist'},a),qn)>=40){all.push(Object.assign({Type:'MusicArtist'},a));have.add(a.Id);}
+    for(const p of (S.cache.playlists||[]))if(!have.has(p.Id)&&scoreItem(Object.assign({Type:'Playlist'},p),qn)>=40){all.push(Object.assign({Type:'Playlist'},p));have.add(p.Id);}
+  }
+  // Typo rescue for songs: the server only does substring matching, so ask
+  // for a shorter prefix of each long word and let the fuzzy scorer decide.
+  if(all.filter(i=>i.Type==='Audio'&&scoreItem(i,qn)>=40).length<3){
+    const prefixes=[...new Set(words.filter(w=>w.length>=4).map(w=>w.slice(0,Math.max(3,Math.ceil(w.length*0.6)))))].slice(0,2);
+    if(prefixes.length){
+      const more=await Promise.all(prefixes.map(p=>_searchApi({SearchTerm:p,IncludeItemTypes:'Audio,MusicAlbum,MusicArtist',Limit:80})));
+      if(seq!==_searchSeq)return;
+      all=dedupeById(all.concat(more.flat()));
+    }
+  }
+
+  // Score, then hide albums you've hidden.
+  let scored=all.map(i=>({i,s:scoreItem(i,qn)})).filter(x=>x.s>=40);
+  const hiddenOk=new Set(filterHiddenAlbums(scored.filter(x=>x.i.Type==='MusicAlbum').map(x=>x.i)).map(a=>a.Id));
+  scored=scored.filter(x=>x.i.Type!=='MusicAlbum'||hiddenOk.has(x.i.Id)).sort((a,b)=>b.s-a.s);
+  // Same song, several versions: keep the best-scoring one first, others after.
+  const by=t=>scored.filter(x=>x.i.Type===t).map(x=>x.i);
+  const res={q,qn,top:scored[0]?scored[0].i:null,topScore:scored[0]?scored[0].s:0,
+    songs:by('Audio'),albums:by('MusicAlbum'),artists:by('MusicArtist'),playlists:by('Playlist')};
+
+  // Looking for an artist? Show their most-played songs too.
+  const topArtist=res.artists[0];
+  if(topArtist&&matchText(qn,searchNorm(topArtist.Name))>=76){
+    const theirs=await _searchApi({ArtistIds:topArtist.Id,IncludeItemTypes:'Audio',SortBy:'PlayCount,SortName',SortOrder:'Descending',Limit:10});
+    if(seq!==_searchSeq)return;
+    const have=new Set(res.songs.map(t=>t.Id));
+    res.artistSongs=theirs.filter(t=>!have.has(t.Id));
+    res.songs=res.songs.concat(res.artistSongs);
+  }
+  _searchState=res;
+  if(!['all','songs','artists','albums','playlists'].includes(_searchFilter))_searchFilter='all';
+  renderSearchResults();
+}
+function dedupeById(items){const seen=new Set(),out=[];for(const i of items){if(!i||!i.Id||seen.has(i.Id))continue;seen.add(i.Id);out.push(i);}return out;}
+
+/* ── rendering ── */
+function setSearchFilter(f){_searchFilter=f;renderSearchResults();const sa=document.querySelector('#view-search .scroll-area');if(sa)sa.scrollTop=0;}
+function renderSearchResults(){
+  const body=document.getElementById('search-body');
+  const r=_searchState;if(!body||!r)return;
+  body.innerHTML='';
+  const total=r.songs.length+r.albums.length+r.artists.length+r.playlists.length;
+  if(!total){
+    body.innerHTML=`<div class="empty" style="padding:60px 24px;line-height:1.6;">
+      <div style="font-size:16px;font-weight:700;color:var(--text2);margin-bottom:8px;">Nothing found for “${esc(r.q)}”</div>
+      <div style="font-size:13px;color:var(--text3);">Check the spelling, try fewer words — or text Kami to get it added to the library.</div>
+    </div>`;
+    return;
+  }
+  // Filter chips — only for kinds that have results.
+  const chips=[['all','All',total],['songs','Songs',r.songs.length],['artists','Artists',r.artists.length],['albums','Albums',r.albums.length],['playlists','Playlists',r.playlists.length]].filter(c=>c[0]==='all'||c[2]);
+  const chipRow=document.createElement('div');chipRow.className='search-chips';
+  chips.forEach(([k,label])=>{
+    const b=document.createElement('button');b.className='lib-chip'+(_searchFilter===k?' active':'');b.textContent=label;
+    b.onclick=()=>setSearchFilter(k);chipRow.appendChild(b);
+  });
+  body.appendChild(chipRow);
+  const remember=()=>addRecentSearch(r.q);
+  const songRow=(t,i,list)=>{
+    const row=mkTrack(t,i+1,list,'Search',r.q);
+    row.onclick=()=>{remember();playWithRadio(t,'Search',`“${r.q}”`);};
+    return row;
+  };
+  const albumRow=a=>mkSRow(a,false,()=>{remember();openAlbum(a);},esc(['Album',a.AlbumArtist,a.ProductionYear].filter(Boolean).join(' · ')));
+  const artistRow=a=>mkSRow(a,true,()=>{remember();openArtist(a);},'Artist');
+  const plRow=p=>mkSRow(p,false,()=>{remember();openAlbum(p);},'Playlist'+(p.ChildCount?` · ${p.ChildCount} songs`:''));
+  const more=(label,k)=>{const b=document.createElement('button');b.className='search-more';b.textContent=label;b.onclick=()=>setSearchFilter(k);return b;};
+
+  if(_searchFilter==='all'){
+    if(r.top)body.appendChild(mkTopResult(r.top,remember));
+    const topId=r.top&&r.top.Id;
+    const songs=r.songs.filter(t=>t.Id!==topId);
+    if(songs.length){
+      body.appendChild(mkSH('Songs',true));
+      songs.slice(0,5).forEach((t,i)=>body.appendChild(songRow(t,i,songs)));
+      if(songs.length>5)body.appendChild(more(`See all ${songs.length} songs`,'songs'));
+    }
+    const artists=r.artists.filter(a=>a.Id!==topId);
+    if(artists.length){body.appendChild(mkSH('Artists',true));artists.slice(0,3).forEach(a=>body.appendChild(artistRow(a)));if(artists.length>3)body.appendChild(more('See all artists','artists'));}
+    const albums=r.albums.filter(a=>a.Id!==topId);
+    if(albums.length){body.appendChild(mkSH('Albums',true));albums.slice(0,4).forEach(a=>body.appendChild(albumRow(a)));if(albums.length>4)body.appendChild(more(`See all ${albums.length} albums`,'albums'));}
+    const pls=r.playlists.filter(p=>p.Id!==topId);
+    if(pls.length){body.appendChild(mkSH('Playlists',true));pls.slice(0,3).forEach(p=>body.appendChild(plRow(p)));}
+  }else if(_searchFilter==='songs'){
+    r.songs.slice(0,80).forEach((t,i)=>body.appendChild(songRow(t,i,r.songs)));
+  }else if(_searchFilter==='artists'){
+    r.artists.forEach(a=>body.appendChild(artistRow(a)));
+  }else if(_searchFilter==='albums'){
+    r.albums.forEach(a=>body.appendChild(albumRow(a)));
+  }else if(_searchFilter==='playlists'){
+    r.playlists.forEach(p=>body.appendChild(plRow(p)));
+  }
+}
+function mkTopResult(item,remember){
+  const card=document.createElement('div');card.className='search-top-card';
+  const isArtist=item.Type==='MusicArtist',isSong=item.Type==='Audio';
+  const img=document.createElement('img');img.className='stc-art'+(isArtist?' circle':'');
+  loadImg(img,isSong?(item.AlbumId||item.Id):item.Id,'Primary',300);
+  const kind={Audio:'Song',MusicAlbum:'Album',MusicArtist:'Artist',Playlist:'Playlist'}[item.Type]||'';
+  const sub=isSong?[(item.Artists||[]).join(', ')||item.AlbumArtist].filter(Boolean):item.Type==='MusicAlbum'?[item.AlbumArtist,item.ProductionYear].filter(Boolean):[];
+  const info=document.createElement('div');info.className='stc-info';
+  info.innerHTML=`<div class="stc-name">${esc(item.Name)}</div><div class="stc-sub"><span class="stc-kind">${kind}</span>${sub.length?' · '+esc(sub.join(' · ')):''}</div>`;
+  const play=document.createElement('button');play.className='stc-play';play.setAttribute('aria-label','Play');
+  play.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  play.onclick=e=>{e.stopPropagation();remember();playSearchItem(item);};
+  card.append(img,info,play);
+  card.onclick=()=>{remember();
+    if(isSong)playWithRadio(item,'Search',item.Name);
+    else if(isArtist)openArtist(item);
+    else openAlbum(item);
+  };
+  return card;
+}
+async function playSearchItem(item){
+  try{
+    if(item.Type==='Audio')return playWithRadio(item,'Search',item.Name);
+    if(item.Type==='MusicArtist'){
+      // Their most-played song, with a radio of them and similar artists after.
+      const top=await _searchApi({ArtistIds:item.Id,IncludeItemTypes:'Audio',SortBy:'PlayCount,Random',SortOrder:'Descending',Limit:1});
+      if(top[0])return playWithRadio(top[0],'Artist Radio',`${item.Name} Radio`);
+      return showToast('No songs for this artist');
+    }
+    const tracks=await _searchApi({ParentId:item.Id,IncludeItemTypes:'Audio',SortBy:item.Type==='Playlist'?undefined:'ParentIndexNumber,IndexNumber,SortName',Limit:500});
+    if(!tracks.length)return showToast('Nothing to play');
+    playQueue(tracks,S.shuffle?Math.floor(Math.random()*tracks.length):0,item.Type==='Playlist'?'Playlist':'Album',item.Name);
+  }catch(e){showToast('Could not play that');}
+}
+
 function mkSH(t,mt=false){const h=document.createElement('div');h.className='section-head';if(mt)h.style.paddingTop='16px';h.innerHTML=`<span class="section-title">${t}</span>`;return h;}
 function mkSRow(item,circle,onclick,sub){
   const row=document.createElement('div');row.className='list-row';row.onclick=onclick;
@@ -6624,20 +6801,45 @@ function mkSRow(item,circle,onclick,sub){
   info.innerHTML=`<div class="list-name">${esc(item.Name)}</div><div class="list-sub">${sub}</div>`;
   row.append(img,info);return row;
 }
-// Empty search tab now shows recent searches as tappable chips.
+
+/* ── empty state: recents + browse by genre ── */
+let _genreCache=null;
+async function loadSearchGenres(){
+  if(_genreCache)return _genreCache;
+  try{
+    const r=await api('/MusicGenres',{UserId:S.uid,SortBy:'SortName',Recursive:true,Limit:200});
+    _genreCache=(r.Items||[]).map(g=>g.Name).filter(Boolean);
+  }catch(e){_genreCache=[];}
+  return _genreCache;
+}
+function genreColor(name){
+  let h=0;for(const c of String(name))h=(h*31+c.charCodeAt(0))>>>0;
+  return `hsl(${h%360},45%,32%)`;
+}
 function renderSearchBrowse(){
   const body=document.getElementById('search-body');
   if(!body)return;
   const q=document.getElementById('s-input')?.value?.trim();
   if(q)return;// active search — leave results alone
   const recents=getRecentSearches();
-  if(!recents.length){body.innerHTML='';return;}
-  body.innerHTML=`
-    <div class="section-head" style="padding-top:8px;"><span class="section-title">Recent searches</span>
+  let html='';
+  if(recents.length){
+    html+=`<div class="section-head" style="padding-top:8px;"><span class="section-title">Recent searches</span>
       <button class="section-see-all" onclick="clearRecentSearches()">Clear</button></div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 16px;">
-      ${recents.map(s=>`<button onclick="searchFromRecent('${esc(s).replace(/'/g,"\\'")}')" style="background:var(--bg3);border:1px solid var(--bg5);border-radius:50px;padding:8px 16px;font-family:inherit;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;">${esc(s)}</button>`).join('')}
-    </div>`;
+      <div class="recent-searches">${recents.map(s=>{const a=esc(s).replace(/'/g,"\\'");return `<div class="recent-row" onclick="searchFromRecent('${a}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 2"/></svg>
+        <span>${esc(s)}</span>
+        <button aria-label="Remove" onclick="event.stopPropagation();removeRecentSearch('${a}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>`;}).join('')}</div>`;
+  }
+  html+=`<div id="search-genres"></div>`;
+  body.innerHTML=html;
+  loadSearchGenres().then(genres=>{
+    const el=document.getElementById('search-genres');
+    if(!el||!genres.length||document.getElementById('s-input')?.value?.trim())return;
+    el.innerHTML=`<div class="section-head" style="padding-top:16px;"><span class="section-title">Genre radio</span></div>
+      <div class="genre-grid">${genres.map(g=>{const a=esc(g).replace(/'/g,"\\'");return `<button class="genre-tile" style="background:${genreColor(g)}" onclick="startGenreRadio('${a}')"><span>${esc(g)}</span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>`;}).join('')}</div>`;
+  });
 }
 
 /* ============================================================
@@ -6748,6 +6950,13 @@ async function playIdx(idx){
   // Warm the HTTP cache for the next track so auto-advance is instant.
   // Key to Spotify-like gapless feel; prevents next song stalling when backgrounded.
   preloadNextTrack();
+  // Last song in the queue: line up what comes after it now, while the app
+  // is certainly awake, rather than in the final seconds when the phone may
+  // be locked and the network asleep.
+  if(S.autoplay&&!_radioStation&&S.qIdx>=S.queue.length-1){
+    const forId=S.track.Id;
+    setTimeout(()=>{if(S.track&&S.track.Id===forId)prefetchAutoplay();},4000);
+  }
 }
 
 /* ── PRE-BUFFERING THE NEXT TRACK ──
@@ -6923,11 +7132,15 @@ async function startSongRadio(track){
   if(!track)return;
   showToast('Starting radio…');
   try{
-    const mix=await fetchInstantMix(track.Id,50);
-    const rest=mix.filter(t=>t.Id!==track.Id);
-    const queue=[track,...rest];
-    if(queue.length<2){showToast('Not enough similar songs found');return;}
-    playQueue(queue,0,'Song Radio',`${track.Name} Radio`);
+    let rest=[];
+    try{rest=await SmartMix.forTrack(track,{n:50});}catch(e){}
+    if(rest.length<3){// engine came up short — fall back to the plain server mix
+      const mix=await fetchInstantMix(track.Id,50);
+      const have=new Set(rest.map(t=>t.Id));
+      rest=rest.concat(mix.filter(t=>t.Id!==track.Id&&!have.has(t.Id)));
+    }
+    if(!rest.length){showToast('Not enough similar songs found');return;}
+    playSmartQueue([track,...rest],'Song Radio',`${track.Name} Radio`);
   }catch(e){showToast('Could not start song radio');}
 }
 
@@ -7628,6 +7841,497 @@ function confirmSleepPicker(){
 S.autoplay=localStorage.getItem('ma_autoplay')!=='0';
 let _autoplayFetching=false;
 let _autoplayFetchedFor=null;
+/* ============================================================
+   SMART MIX — song radio, autoplay, genre radio, playlist picks
+   ------------------------------------------------------------
+   Jellyfin's InstantMix on its own is a genre lookup: it will happily follow
+   a Bach cantata with Kylie if both happen to be tagged badly. This layer
+   gathers candidates from several places (InstantMix, the same artist,
+   artists Jellyfin calls similar, the seed's genres) and then judges every
+   candidate itself:
+
+   * Sound   — each genre tag is mapped onto a rough "vibe" position
+               (energy, electronic-ness, groove). Classical and dance-pop sit
+               at opposite corners, so they're never neighbours.
+   * Genre   — overlap of the actual genre tags.
+   * Artist  — same artist, artists Jellyfin rates as similar, and artists
+               YOU tend to play back-to-back (learned from your play log).
+   * Era     — release years close together blend better.
+
+   Candidates that are clearly far from the seed are dropped outright, and
+   the survivors are ordered as a chain: each next song has to sit well next
+   to the one before it *and* stay close to where the radio started, with
+   no artist repeating within three songs. That's what stops harsh cuts.
+============================================================ */
+const MIX_FIELDS='RunTimeTicks,Artists,ArtistItems,AlbumId,Album,AlbumArtist,Genres,ProductionYear,UserData';
+
+// Genre tag -> broad families. A tag can belong to several
+// ("instrumental hip hop" is both hip-hop and beats).
+const FAMILY_RULES=[
+  ['classical',/\b(classical|baroque|orchestr|symphon|concerto|sonata|opera|chamber|choral|requiem|minimalis|string quartet|early music|renaissance|romantic period)/],
+  ['ambient',/\b(ambient|drone|new age|meditat|field recording)/],
+  ['soundtrack',/\b(soundtrack|score|film|video game|ost|showtunes?|musical theat)/],
+  ['jazz',/\b(jazz|bebop|hard bop|swing|big band|fusion|bossa)/],
+  ['blues',/\b(blues)/],
+  ['folk',/\b(folk|acoustic|singer.?songwriter|country|americana|bluegrass|celtic|chanson)/],
+  ['soul',/\b(soul|funk|r ?& ?b|rnb|rhythm and blues|motown|gospel|quiet storm|doo.?wop)/],
+  ['hiphop',/\b(hip.?hop|rap|trap|boom.?bap|grime|drill|gangsta|jazz.?hop)/],
+  ['beats',/\b(instrumental hip.?hop|beats|beat tape|lo.?fi|downtempo|trip.?hop|chillhop|jazz.?hop|abstract hip.?hop|wonky|future beats|chill.?out)/],
+  ['dance',/\b(house|techno|edm|trance|dance|club|disco|eurodance|dubstep|drum ?(and|n|&) ?bass|dnb|jungle|breakbeat|hardstyle|uk garage)/],
+  ['electronic',/\b(electronic|electronica|idm|glitch|synth\b|synthwave|leftfield|chiptune|vaporwave|electro\b)/],
+  ['pop',/\b(pop|bubblegum|teen)/],
+  ['rock',/\b(rock|indie|alternative|alt\b|post.?punk|britpop|shoegaze|grunge|new wave|prog|krautrock|surf)/],
+  ['psych',/\b(psychedelic|psych\b)/],
+  ['punk',/\b(punk|hardcore|emo\b|screamo)/],
+  ['metal',/\b(metal|sludge|thrash|grindcore)/],
+  ['reggae',/\b(reggae|dub\b|ska\b|dancehall|rocksteady)/],
+  ['world',/\b(latin|salsa|samba|cumbia|reggaeton|afro|highlife|world|tropical|mpb)/],
+  ['experimental',/\b(experimental|avant|noise\b|musique concr|sound art|free improv)/],
+  ['lounge',/\b(easy listening|lounge|exotica|library music)/],
+];
+// How naturally one family flows into another (symmetric; unlisted = 0.08).
+const FAMILY_AFFINITY=(()=>{
+  const m=new Map(),set=(a,b,v)=>{m.set(a+'|'+b,v);m.set(b+'|'+a,v);};
+  [['classical','ambient',.5],['classical','soundtrack',.65],['classical','jazz',.25],['classical','folk',.2],['classical','experimental',.3],['classical','lounge',.2],
+   ['ambient','electronic',.55],['ambient','experimental',.55],['ambient','soundtrack',.5],['ambient','beats',.35],['ambient','lounge',.3],
+   ['soundtrack','electronic',.3],['soundtrack','lounge',.35],['soundtrack','jazz',.25],
+   ['jazz','blues',.7],['jazz','soul',.6],['jazz','beats',.55],['jazz','lounge',.55],['jazz','world',.45],['jazz','hiphop',.3],['jazz','experimental',.3],['jazz','folk',.25],
+   ['blues','soul',.6],['blues','rock',.5],['blues','folk',.5],
+   ['folk','rock',.45],['folk','psych',.4],['folk','world',.3],['folk','soul',.25],['folk','pop',.3],
+   ['soul','hiphop',.6],['soul','beats',.6],['soul','pop',.45],['soul','reggae',.45],['soul','dance',.4],['soul','world',.4],['soul','lounge',.35],
+   ['hiphop','beats',.85],['hiphop','electronic',.35],['hiphop','pop',.35],['hiphop','reggae',.35],['hiphop','dance',.25],
+   ['beats','electronic',.65],['beats','experimental',.35],['beats','lounge',.4],['beats','world',.3],
+   ['dance','electronic',.7],['dance','pop',.75],
+   ['electronic','experimental',.55],['electronic','psych',.3],['electronic','pop',.35],['electronic','rock',.25],
+   ['pop','rock',.45],['pop','psych',.25],
+   ['rock','psych',.7],['rock','punk',.6],['rock','metal',.45],
+   ['psych','experimental',.4],['psych','world',.3],
+   ['punk','metal',.6],
+   ['reggae','world',.5],
+   ['experimental','rock',.25]].forEach(([a,b,v])=>set(a,b,v));
+  return m;
+})();
+const _famCache=new Map();
+function familiesOfGenre(g){
+  const k=String(g||'').toLowerCase().trim();
+  if(!k)return [];
+  if(_famCache.has(k))return _famCache.get(k);
+  const out=FAMILY_RULES.filter(([,re])=>re.test(k)).map(([f])=>f);
+  _famCache.set(k,out);
+  return out;
+}
+// The "sound" of a set of genre tags: family -> weight, or null if unknown.
+function vibeOfGenres(list){
+  const w=new Map();
+  for(const g of list||[]){const fs=familiesOfGenre(g);fs.forEach(f=>w.set(f,(w.get(f)||0)+1/fs.length));}
+  if(!w.size)return null;
+  const tot=[...w.values()].reduce((a,b)=>a+b,0);
+  for(const [f,v] of w)w.set(f,v/tot);
+  return w;
+}
+function vibeOfGenre(g){return vibeOfGenres([g]);}
+const famAff=(a,b)=>a===b?1:(FAMILY_AFFINITY.get(a+'|'+b)||0.08);
+/* 0..1 — how well two sounds sit together; null when either is unknown.
+   Each side's families look for their best partner on the other side, and
+   the two directions are averaged, so one shared tag can't paper over a
+   mostly-different sound. */
+function vibeSim(a,b){
+  if(!a||!b)return null;
+  const dir=(x,y)=>{let s=0;for(const [f,w] of x){let best=0;for(const g of y.keys())best=Math.max(best,famAff(f,g));s+=w*best;}return s;};
+  return (dir(a,b)+dir(b,a))/2;
+}
+function _avgVibe(list){
+  const w=new Map();let n=0;
+  for(const v of list){if(!v)continue;n++;for(const [f,x] of v)w.set(f,(w.get(f)||0)+x);}
+  if(!n)return null;
+  for(const [f,x] of w)w.set(f,x/n);
+  return w;
+}
+const _normName=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+
+/* Your own listening as a signal: artists you play back-to-back (within
+   20 minutes of each other) are treated as related, even if no tag says so. */
+let _coListen=null,_coListenAt=0;
+function coListenMap(){
+  if(_coListen&&Date.now()-_coListenAt<5*60000)return _coListen;
+  const m=new Map();
+  let log=[];
+  try{log=(typeof playLog==='function'?playLog():[])||[];}catch(e){}
+  const add=(a,b)=>{if(!a||!b||a===b)return;const k=a<b?a+'|'+b:b+'|'+a;m.set(k,(m.get(k)||0)+1);};
+  for(let i=0;i+1<log.length;i++){
+    const x=log[i],y=log[i+1];
+    if(!x||!y||Math.abs((x.t||0)-(y.t||0))>20*60000)continue;
+    const ax=String(x.a||'').split(',').map(_normName).filter(Boolean);
+    const ay=String(y.a||'').split(',').map(_normName).filter(Boolean);
+    for(const p of ax)for(const q of ay)add(p,q);
+  }
+  _coListen=m;_coListenAt=Date.now();
+  return m;
+}
+function coListen(namesA,namesB){
+  const m=coListenMap();let best=0;
+  for(const a of namesA)for(const b of namesB){
+    if(a===b)continue;
+    const c=m.get(a<b?a+'|'+b:b+'|'+a)||0;
+    if(c>best)best=c;
+  }
+  return Math.min(1,best/4);
+}
+function recentlyPlayedIds(limit=60){
+  try{return new Set((playLog()||[]).slice(0,limit).map(e=>e.i));}catch(e){return new Set();}
+}
+
+/* Everything the scorer needs about one track, computed once. */
+function mixMeta(t,albumInfo){
+  if(t.__mm)return t.__mm;
+  const al=albumInfo&&t.AlbumId?albumInfo.get(t.AlbumId):null;
+  let genres=(t.Genres&&t.Genres.length?t.Genres:(al&&al.Genres)||[]).map(g=>String(g).toLowerCase().trim()).filter(Boolean);
+  const artistIds=(t.ArtistItems||[]).map(a=>a.Id).filter(Boolean);
+  const artistNames=((t.Artists&&t.Artists.length?t.Artists:[t.AlbumArtist]).filter(Boolean)).map(_normName);
+  const year=t.ProductionYear||(al&&al.ProductionYear)||0;
+  const mm={genres,gset:new Set(genres),vibe:vibeOfGenres(genres),artistIds,artistNames,year,album:t.AlbumId||'',
+    key:_normName(t.Name).replace(/\b(remaster(ed)?|live|demo|mono|stereo|version|edit|mix|\d{4})\b/g,'').trim()+'|'+(artistNames[0]||'')};
+  Object.defineProperty(t,'__mm',{value:mm,enumerable:false,configurable:true});
+  return mm;
+}
+function sameArtist(a,b){
+  if(a.artistIds.length&&b.artistIds.length)return a.artistIds.some(id=>b.artistIds.includes(id));
+  return a.artistNames.some(n=>b.artistNames.includes(n));
+}
+function genreJaccard(a,b){
+  if(!a.gset.size||!b.gset.size)return 0;
+  let inter=0;for(const g of a.gset)if(b.gset.has(g))inter++;
+  return inter/(a.gset.size+b.gset.size-inter);
+}
+/* How well track b would sit right after track a. 0..1 */
+function pairSim(a,b,related,chain){
+  const vs=vibeSim(a.vibe,b.vibe);
+  const gj=genreJaccard(a,b);
+  let ar=0;
+  // In a running sequence the same artist again is fine, not a goal.
+  if(sameArtist(a,b))ar=chain?0.5:1;
+  else if(related&&b.artistIds.some(id=>related.has(id)))ar=0.7;
+  else ar=0.6*coListen(a.artistNames,b.artistNames);
+  const era=(a.year&&b.year)?Math.exp(-Math.abs(a.year-b.year)/15):0.6;
+  return 0.34*(vs==null?0.45:vs)+0.24*gj+0.28*ar+0.14*era;
+}
+
+/* A blended "where this radio lives" from one or more seed tracks. */
+function mixProfile(seedMetas){
+  const gcount=new Map(),vibes=[],years=[];
+  const artistIds=new Set(),artistNames=new Set();
+  for(const m of seedMetas){
+    m.genres.forEach(g=>gcount.set(g,(gcount.get(g)||0)+1));
+    if(m.vibe)vibes.push(m.vibe);
+    if(m.year)years.push(m.year);
+    m.artistIds.forEach(x=>artistIds.add(x));m.artistNames.forEach(x=>artistNames.add(x));
+  }
+  years.sort((a,b)=>a-b);
+  const genres=[...gcount.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+  return {gcount,total:Math.max(1,seedMetas.length),genres,gset:new Set(genres),vibe:_avgVibe(vibes),
+    year:years.length?years[Math.floor(years.length/2)]:0,artistIds:[...artistIds],artistNames:[...artistNames]};
+}
+function profileSim(p,m,related){
+  const vs=vibeSim(p.vibe,m.vibe);
+  let g=0;for(const x of m.gset)g=Math.max(g,(p.gcount.get(x)||0)/p.total);
+  let ar=0;
+  if(sameArtist(p,m))ar=1;
+  else if(related&&m.artistIds.some(id=>related.has(id)))ar=0.7;
+  else ar=0.6*coListen(p.artistNames,m.artistNames);
+  const era=(p.year&&m.year)?Math.exp(-Math.abs(p.year-m.year)/15):0.6;
+  return {score:0.34*(vs==null?0.45:vs)+0.24*g+0.28*ar+0.14*era,vs,g,ar};
+}
+
+async function _mixItems(params){
+  try{
+    const r=await api(`/Users/${S.uid}/Items`,Object.assign({IncludeItemTypes:'Audio',Recursive:true,Fields:MIX_FIELDS},params));
+    return r.Items||[];
+  }catch(e){return [];}
+}
+async function _instantMix(id,limit){
+  try{const r=await api(`/Items/${id}/InstantMix`,{UserId:S.uid,Limit:limit,Fields:MIX_FIELDS});return r.Items||[];}
+  catch(e){return [];}
+}
+async function _similarArtists(artistId,limit=10){
+  for(const path of [`/Artists/${artistId}/Similar`,`/Items/${artistId}/Similar`]){
+    try{const r=await api(path,{UserId:S.uid,Limit:limit});const it=(r.Items||[]).filter(x=>!x.Type||x.Type==='MusicArtist');if(it.length)return it;}
+    catch(e){}
+  }
+  return [];
+}
+/* Tracks often carry no genre of their own — borrow the album's. */
+async function _albumInfo(tracks){
+  const need=[...new Set(tracks.filter(t=>!(t.Genres&&t.Genres.length)||!t.ProductionYear).map(t=>t.AlbumId).filter(Boolean))];
+  const map=new Map();
+  for(let i=0;i<need.length&&i<400;i+=100){
+    try{
+      const r=await api(`/Users/${S.uid}/Items`,{Ids:need.slice(i,i+100).join(','),Fields:'Genres,ProductionYear'});
+      (r.Items||[]).forEach(a=>map.set(a.Id,a));
+    }catch(e){}
+  }
+  return map;
+}
+/* Seeds may be thin objects (from On Repeat etc.) — fetch the full item. */
+async function _hydrate(tracks){
+  const thin=tracks.filter(t=>t&&t.Id&&!t.ArtistItems);
+  if(!thin.length)return tracks;
+  const full=new Map();
+  for(let i=0;i<thin.length;i+=100){
+    try{
+      const r=await api(`/Users/${S.uid}/Items`,{Ids:thin.slice(i,i+100).map(t=>t.Id).join(','),Fields:MIX_FIELDS});
+      (r.Items||[]).forEach(x=>full.set(x.Id,x));
+    }catch(e){}
+  }
+  return tracks.map(t=>full.get(t&&t.Id)||t);
+}
+
+/* Order candidates into a smooth chain. */
+function chainOrder(cands,profile,related,lastMeta,n,opts={}){
+  const recent=recentlyPlayedIds(opts.freshWindow||60);
+  const pc=(typeof playCounts==='function')?playCounts():{};
+  const temp=opts.temperature==null?0.35:opts.temperature;
+  let pool=cands.map(t=>{
+    const m=t.__mm;
+    const ps=profileSim(profile,m,related);
+    // A pinch of jitter so the same seed gives a fresh radio each time.
+    let base=ps.score+0.05*Math.min(3,t.__votes||1)+Math.random()*0.07;
+    const c=(pc[t.Id]&&pc[t.Id].c)||(t.UserData&&t.UserData.PlayCount)||0;
+    base+=0.03*Math.min(1,Math.log2(1+c)/4);
+    try{if(isBanger(t.Id))base+=0.05;}catch(e){}
+    if(recent.has(t.Id))base-=0.12;
+    return {t,m,base,ps};
+  });
+  // Hard gate: nothing that obviously doesn't belong. An unknown sound is
+  // only allowed in when something else vouches for it.
+  pool=pool.filter(x=>{
+    const {vs,g,ar}=x.ps;
+    if(ar>=0.7)return true;
+    if(vs!=null)return vs>=0.5||g>=0.34;
+    return g>0||(x.t.__votes||0)>=2;
+  });
+  pool.sort((a,b)=>b.base-a.base);
+  pool=pool.slice(0,Math.max(n*4,60));
+  const out=[],lastArtists=[],lastAlbums=[],perArtist=new Map();
+  const cap=Math.max(2,Math.ceil(n/6));
+  if(lastMeta)lastArtists.push(...lastMeta.artistNames);
+  let prev=lastMeta;
+  while(out.length<n&&pool.length){
+    // Never the same artist twice in a row, and nobody dominates the radio —
+    // unless the library genuinely has nothing else that fits.
+    const recentA=lastArtists.slice(-2);
+    let avail=pool.filter(x=>!x.m.artistNames.some(a=>recentA.includes(a))&&!x.m.artistNames.some(a=>(perArtist.get(a)||0)>=cap));
+    if(!avail.length)avail=pool.filter(x=>!x.m.artistNames.some(a=>recentA.includes(a)));
+    if(!avail.length)avail=pool;
+    const scored=avail.map(x=>{
+      let s=x.base*0.45;
+      if(prev){
+        s+=0.55*pairSim(prev,x.m,related,true);
+        const v=vibeSim(prev.vibe,x.m.vibe);
+        if(v!=null&&v<0.4)s-=0.4;            // no hard left turns
+      }else s+=0.55*x.base;
+      if(x.m.artistNames.some(a=>lastArtists.slice(-5).includes(a)))s-=0.15;
+      if(x.m.album&&lastAlbums.slice(-6).includes(x.m.album))s-=0.2;
+      return {x,s};
+    }).sort((a,b)=>b.s-a.s);
+    // Small, controlled randomness so the same seed doesn't always give
+    // the identical radio, without ever picking something poor.
+    const top=scored.slice(0,3).filter(y=>y.s>=scored[0].s-0.08);
+    let pick=top[0];
+    if(top.length>1&&temp>0){
+      const w=top.map(y=>Math.exp((y.s-scored[0].s)/Math.max(0.01,temp*0.1)));
+      let r=Math.random()*w.reduce((a,b)=>a+b,0);
+      for(let i=0;i<top.length;i++){r-=w[i];if(r<=0){pick=top[i];break;}}
+    }
+    out.push(pick.x.t);
+    pick.x.m.artistNames.forEach(a=>perArtist.set(a,(perArtist.get(a)||0)+1));
+    lastArtists.push(...pick.x.m.artistNames);
+    if(pick.x.m.album)lastAlbums.push(pick.x.m.album);
+    prev=pick.x.m;
+    pool.splice(pool.indexOf(pick.x),1);
+  }
+  return out;
+}
+
+function _collect(lists,excludeIds,excludeKeys){
+  const by=new Map();
+  for(const [src,items] of lists){
+    for(const t of items||[]){
+      if(!t||!t.Id||excludeIds.has(t.Id))continue;
+      const cur=by.get(t.Id);
+      if(cur){cur.__votes=(cur.__votes||1)+1;if(src==='mix')cur.__src='mix';continue;}
+      t.__votes=1;t.__src=src;by.set(t.Id,t);
+    }
+  }
+  return [...by.values()];
+}
+function _dedupeVersions(cands,excludeKeys){
+  const seen=new Set(excludeKeys),out=[];
+  for(const t of cands){const k=t.__mm.key;if(seen.has(k))continue;seen.add(k);out.push(t);}
+  return out;
+}
+
+const SmartMix={
+  /* Radio from one song. Returns tracks to play AFTER the seed. */
+  async forTrack(seed,{n=50,exclude=[]}={}){
+    const [s]=await _hydrate([seed]);
+    const artistId=(s.ArtistItems||[])[0]?.Id;
+    const genres=(s.Genres||[]).slice(0,4);
+    const [mix,same,sims]=await Promise.all([
+      _instantMix(s.Id,100),
+      artistId?_mixItems({ArtistIds:artistId,SortBy:'Random',Limit:25}):[],
+      artistId?_similarArtists(artistId,10):[],
+    ]);
+    const related=new Set(sims.map(a=>a.Id));
+    const [simTracks,genreTracks]=await Promise.all([
+      related.size?_mixItems({ArtistIds:[...related].slice(0,10).join(','),SortBy:'Random',Limit:120}):[],
+      genres.length?_mixItems({Genres:genres.join('|'),SortBy:'Random',Limit:100}):[],
+    ]);
+    return this._finish([s],[['mix',mix],['artist',same],['similar',simTracks],['genre',genreTracks]],related,n,exclude,s);
+  },
+
+  /* Keep going after a queue ends: blend the last few songs, not just one. */
+  async continueFrom(queue,idx,{n=25}={}){
+    const tail=queue.slice(Math.max(0,idx-4),idx+1).filter(Boolean);
+    if(!tail.length)return [];
+    const seeds=await _hydrate(tail);
+    const last=seeds[seeds.length-1];
+    const artistIds=[...new Set(seeds.flatMap(t=>(t.ArtistItems||[]).map(a=>a.Id)))].slice(0,4);
+    const genres=[...new Set(seeds.flatMap(t=>t.Genres||[]))].slice(0,5);
+    const [mixA,mixB,sims]=await Promise.all([
+      _instantMix(last.Id,80),
+      seeds.length>2?_instantMix(seeds[Math.floor(seeds.length/2)].Id,40):[],
+      artistIds.length?_similarArtists(artistIds[artistIds.length-1],10):[],
+    ]);
+    const related=new Set(sims.map(a=>a.Id));
+    const [simTracks,genreTracks,sameTracks]=await Promise.all([
+      related.size?_mixItems({ArtistIds:[...related].slice(0,10).join(','),SortBy:'Random',Limit:100}):[],
+      genres.length?_mixItems({Genres:genres.join('|'),SortBy:'Random',Limit:80}):[],
+      artistIds.length?_mixItems({ArtistIds:artistIds.join(','),SortBy:'Random',Limit:20}):[],
+    ]);
+    return this._finish(seeds,[['mix',mixA],['mix',mixB],['similar',simTracks],['genre',genreTracks],['artist',sameTracks]],related,n,queue.map(t=>t&&t.Id),last);
+  },
+
+  /* Recommendations for a set of songs (playlists). attempt varies the pick. */
+  async forTracks(tracks,{n=15,exclude=[],attempt=0}={}){
+    let seeds=tracks.filter(Boolean);
+    if(!seeds.length)return [];
+    // Sample up to 24 seeds, rotating with each refresh for variety.
+    if(seeds.length>24){const st=(attempt*7)%seeds.length;seeds=seeds.slice(st).concat(seeds.slice(0,st)).filter((_,i)=>i%Math.ceil(seeds.length/24)===0);}
+    seeds=await _hydrate(seeds);
+    const ai=await _albumInfo(seeds);
+    const metas=seeds.map(t=>mixMeta(t,ai));
+    const prof=mixProfile(metas);
+    // Artists the playlist leans on most
+    const ac=new Map();seeds.forEach(t=>(t.ArtistItems||[]).forEach(a=>ac.set(a.Id,(ac.get(a.Id)||0)+1)));
+    const topArtists=[...ac.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+    const rot=(arr,k)=>arr.length?arr.slice(k%arr.length).concat(arr.slice(0,k%arr.length)):arr;
+    const mixSeeds=rot(seeds,attempt*3).slice(0,3);
+    const [m1,m2,m3,sims]=await Promise.all([
+      ...mixSeeds.map(t=>_instantMix(t.Id,40)),
+      ...Array(3-mixSeeds.length).fill([]),
+      topArtists.length?_similarArtists(rot(topArtists,attempt)[0],12):[],
+    ]);
+    const related=new Set(sims.map(a=>a.Id));
+    const [simTracks,genreTracks,sameTracks]=await Promise.all([
+      related.size?_mixItems({ArtistIds:[...related].slice(0,10).join(','),SortBy:'Random',Limit:80}):[],
+      prof.genres.length?_mixItems({Genres:rot(prof.genres.slice(0,6),attempt).slice(0,4).join('|'),SortBy:'Random',Limit:80}):[],
+      topArtists.length?_mixItems({ArtistIds:rot(topArtists,attempt).slice(0,5).join(','),SortBy:'Random',Limit:30}):[],
+    ]);
+    const excl=new Set([...exclude,...tracks.map(t=>t&&t.Id)]);
+    let cands=_collect([['mix',m1],['mix',m2],['mix',m3],['similar',simTracks],['genre',genreTracks],['artist',sameTracks]],excl);
+    const ai2=await _albumInfo(cands);
+    cands.forEach(t=>mixMeta(t,ai2));
+    cands=_dedupeVersions(cands,metas.map(m=>m.key));
+    // Playlist picks aren't a sequence, so rank by fit and spread artists.
+    const scored=cands.map(t=>({t,ps:profileSim(prof,t.__mm,related)}))
+      .filter(x=>x.ps.ar>=0.7||(x.ps.vs!=null?(x.ps.vs>=0.5||x.ps.g>=0.34):(x.ps.g>0||x.t.__src==='mix')))
+      .map(x=>({t:x.t,s:x.ps.score+0.05*Math.min(3,x.t.__votes||1)+Math.random()*0.04}))
+      .sort((a,b)=>b.s-a.s);
+    const out=[],perArtist=new Map();
+    for(const x of scored){
+      const a=x.t.__mm.artistNames[0]||'';
+      if((perArtist.get(a)||0)>=2)continue;
+      perArtist.set(a,(perArtist.get(a)||0)+1);
+      out.push(x.t);if(out.length>=n)break;
+    }
+    return out;
+  },
+
+  /* A radio built around a genre name. */
+  async forGenre(name,{n=50}={}){
+    const pool=await _mixItems({Genres:name,SortBy:'Random',Limit:200});
+    if(!pool.length)return [];
+    const ai=await _albumInfo(pool);
+    pool.forEach(t=>mixMeta(t,ai));
+    const pseudo={genres:[name.toLowerCase()],gset:new Set([name.toLowerCase()]),vibe:vibeOfGenre(name),artistIds:[],artistNames:[],year:0};
+    const prof=mixProfile([pseudo]);
+    let cands=_dedupeVersions(pool,[]);
+    // Start from a song you've liked or played if there is one.
+    const pc=(typeof playCounts==='function')?playCounts():{};
+    cands.sort((a,b)=>((pc[b.Id]?.c||0)+(isBanger(b.Id)?5:0))-((pc[a.Id]?.c||0)+(isBanger(a.Id)?5:0)));
+    const first=cands[0];
+    const rest=chainOrder(cands.slice(1),prof,null,first.__mm,n-1,{});
+    return [first,...rest];
+  },
+
+  async _finish(seeds,lists,related,n,exclude,last){
+    const excl=new Set([...(exclude||[]),...seeds.map(t=>t.Id)]);
+    let cands=_collect(lists,excl);
+    const ai=await _albumInfo([...seeds,...cands]);
+    const metas=seeds.map(t=>mixMeta(t,ai));
+    cands.forEach(t=>mixMeta(t,ai));
+    cands=_dedupeVersions(cands,metas.map(m=>m.key));
+    const prof=mixProfile(metas);
+    // Weight the most recent seed a little more in the profile.
+    if(metas.length>1){const lm=last.__mm;lm.genres.forEach(g=>prof.gcount.set(g,(prof.gcount.get(g)||0)+1));prof.total+=1;}
+    let out=chainOrder(cands,prof,related,last.__mm,n,{});
+    // If the library is thin around this seed, don't come back empty-handed:
+    // fall back to InstantMix order, still without anything wildly off.
+    if(out.length<Math.min(8,n)){
+      const lv=last.__mm.vibe;
+      const mixOnly=(lists.find(l=>l[0]==='mix')||[0,[]])[1].filter(t=>{
+        if(excl.has(t.Id)||out.includes(t))return false;
+        const v=vibeSim(lv,mixMeta(t,ai).vibe);
+        return v==null||v>=0.4;
+      });
+      out=out.concat(mixOnly.slice(0,n-out.length));
+    }
+    return out;
+  },
+};
+
+/* Queue a mix exactly in the order the engine chose — shuffle would undo
+   the smooth transitions, so radio-style queues bypass it. */
+function playSmartQueue(tracks,ctxType,ctxName){
+  if(!tracks||!tracks.length)return;
+  S.ctxType=ctxType||'';S.ctxName=ctxName||'';
+  S.queue=[...tracks];S.qIdx=0;
+  _autoplayFetchedFor=null;
+  playIdx(0);
+}
+/* Play one song now and let a matching radio fall in behind it. Used by
+   search, where the rest of the result list is rarely what you want next. */
+async function playWithRadio(track,ctxType,ctxName){
+  if(!track)return;
+  playSmartQueue([track],ctxType||'Song Radio',ctxName||`${track.Name} Radio`);
+  try{
+    const more=await SmartMix.forTrack(track,{n:30});
+    if(S.queue.length&&S.queue[0].Id===track.Id&&S.queue.length===1&&more.length){
+      S.queue.push(...more);
+      savePlaybackState();preloadNextTrack();
+      if(document.getElementById('player-queue')?.classList.contains('active'))renderFullQueue();
+    }
+  }catch(e){}
+}
+async function startGenreRadio(name){
+  if(!name)return;
+  showToast(`Starting ${name} radio…`);
+  try{
+    const mix=await SmartMix.forGenre(name,{n:50});
+    if(!mix.length){showToast('No songs found in that genre');return;}
+    playSmartQueue(mix,'Genre Radio',`${name} Radio`);
+  }catch(e){showToast('Could not start genre radio');}
+}
 async function fetchInstantMix(trackId,limit=30){
   const r=await api(`/Items/${trackId}/InstantMix`,{
     UserId:S.uid,Limit:limit,Fields:'RunTimeTicks,Artists,AlbumId,AlbumArtist',
@@ -7642,18 +8346,33 @@ async function prefetchAutoplay(){
   if(S.qIdx<S.queue.length-1)return;// not the last track
   _autoplayFetching=true;
   try{
-    const mix=await fetchInstantMix(S.track.Id,30);
-    _autoplayFetchedFor=S.track.Id;
-    const inQueue=new Set(S.queue.map(t=>t.Id));
-    const fresh=mix.filter(t=>t&&t.Id&&!inQueue.has(t.Id));
-    if(fresh.length&&S.qIdx===S.queue.length-1){
+    const forId=S.track.Id;
+    const fresh=await autoplayCandidates();
+    _autoplayFetchedFor=forId;
+    if(fresh.length&&S.qIdx===S.queue.length-1&&S.track&&S.track.Id===forId){
       S.queue.push(...fresh);
       savePlaybackState();
+      preloadNextTrack();// so the hand-off works with the screen off
       if(document.getElementById('player-queue')?.classList.contains('active'))renderFullQueue();
       showToast('Autoplay: similar songs added');
     }
   }catch(e){}
   _autoplayFetching=false;
+}
+/* Songs to keep going with once the queue runs out: the smart mix blended
+   from the last few songs, falling back to Jellyfin's own mix. */
+async function autoplayCandidates(){
+  const inQueue=new Set(S.queue.map(t=>t&&t.Id));
+  let fresh=[];
+  try{fresh=await SmartMix.continueFrom(S.queue,S.qIdx,{n:25});}catch(e){}
+  if(fresh.length<3&&S.track){
+    try{
+      const mix=await fetchInstantMix(S.track.Id,30);
+      const have=new Set(fresh.map(t=>t.Id));
+      fresh=fresh.concat(mix.filter(t=>t&&t.Id&&!inQueue.has(t.Id)&&!have.has(t.Id)));
+    }catch(e){}
+  }
+  return fresh.filter(t=>t&&t.Id&&!inQueue.has(t.Id));
 }
 function toggleAutoplay(){
   S.autoplay=!S.autoplay;
@@ -8395,9 +9114,7 @@ function nextTrack(){
       if(S.autoplay&&S.track&&!_radioStation){
         (async()=>{
           try{
-            const mix=await fetchInstantMix(S.track.Id,30);
-            const inQueue=new Set(S.queue.map(t=>t.Id));
-            const fresh=mix.filter(t=>t&&t.Id&&!inQueue.has(t.Id));
+            const fresh=await autoplayCandidates();
             if(fresh.length){
               S.queue.push(...fresh);
               savePlaybackState();
@@ -8453,12 +9170,12 @@ function updateRepeatUI(){
   if(!badge){
     badge=document.createElement('span');
     badge.className='repeat-badge';
-    badge.style.cssText='position:absolute;bottom:-2px;right:-2px;font-size:9px;font-weight:900;background:var(--accent);color:#000;border-radius:50%;width:14px;height:14px;display:none;align-items:center;justify-content:center;line-height:1;';
+    badge.style.cssText='position:absolute;top:5px;right:4px;font-size:8px;font-weight:900;background:var(--accent);color:#000;border-radius:50%;width:14px;height:14px;display:none;align-items:center;justify-content:center;line-height:1;';
     btn.style.position='relative';
     btn.appendChild(badge);
   }
   if(S.repeat==='one'){badge.textContent='1';badge.style.display='flex';}
-  else if(S.repeat==='all'){badge.textContent='∞';badge.style.display='flex';}
+  else if(S.repeat==='all'){badge.style.display='none';}
   else{badge.style.display='none';}
 }
 function toggleRepeat(){
