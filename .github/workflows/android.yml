@@ -11,10 +11,17 @@ name: Build apps (Android APK + Windows .exe)
 on:
   release:
     types: [published]
+  # Changes to the app shells get a test build (no release), so a broken
+  # build shows up straight away rather than on release day.
   push:
+    branches: [main]
     tags:
       - 'v*'
       - '[0-9]*'
+    paths:
+      - 'desktop/**'
+      - 'android/**'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:
       version:
@@ -192,11 +199,19 @@ jobs:
         env:
           # No code-signing certificate: don't go looking for one.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm ci
-          npm version "${{ needs.build.outputs.semver }}" --no-git-tag-version --allow-same-version
-          npx electron-builder --win --publish never
+          set -o pipefail
+          fail() {
+            # Put the end of the log in the run summary as an error, so the
+            # reason is visible without digging through the raw log.
+            msg=$(tail -n 60 build.log | tr -d '\r' | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Windows build failed::$msg"
+            exit 1
+          }
+          : > build.log
+          npm ci --no-audit --no-fund 2>&1 | tee -a build.log || fail
+          npm version "${{ needs.build.outputs.semver }}" --no-git-tag-version --allow-same-version 2>&1 | tee -a build.log || fail
+          npx electron-builder --win --publish never 2>&1 | tee -a build.log || fail
           ls -la dist
 
       - name: Upload as a build artifact
@@ -210,6 +225,7 @@ jobs:
   release:
     name: Publish release
     needs: [build, windows]
+    if: github.event_name != 'push' || github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       - name: Collect the builds

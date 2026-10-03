@@ -29,7 +29,6 @@
       "output": "dist"
     },
     "win": {
-      "icon": "build/icon.png",
       "target": [
         {
           "target": "nsis",
@@ -56,6 +55,11 @@
     },
     "portable": {
       "artifactName": "MusicArchive-${version}-portable.${ext}"
-    }
+    },
+    "publish": null
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/terpenesalad/jellymusic.git"
   }
 }
