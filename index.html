@@ -1611,7 +1611,7 @@ let _deferredInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',(e)=>{
   e.preventDefault();
   _deferredInstallPrompt=e;
-  if(window.MAHost)return; // already the installed app
+  if(window.MAHost||window.maDesktop)return; // already the installed app
   const btn=document.getElementById('home-install-btn');
   if(btn){btn.style.display='inline-flex';btn.dataset.ready='1';}
 });
@@ -1631,7 +1631,7 @@ window.addEventListener('appinstalled',()=>{
 function showInstallButtonIfNeeded(){
   const btn=document.getElementById('home-install-btn');
   if(!btn)return;
-  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone||!!window.MAHost;
+  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone||!!window.MAHost||!!window.maDesktop;
   btn.style.display=isStandalone?'none':'inline-flex';
 }
 
@@ -1730,8 +1730,12 @@ else document.addEventListener('DOMContentLoaded',showInstallButtonIfNeeded);
    INIT
 ============================================================ */
 (function init(){
+  prefillLogin();
   const saved=localStorage.getItem('ma');
-  if(!saved)return;
+  // Desktop app with no session (first run after an update that lost it,
+  // or a token the server threw away): sign back in with the saved login
+  // instead of showing the form.
+  if(!saved){if(window.maDesktop)queueMicrotask(()=>desktopAutoLogin());return;}
   let d;
   try{d=JSON.parse(saved);}catch(e){return;}
   if(!d||!d.url||!d.tok)return;
@@ -1760,16 +1764,98 @@ async function doLogin(){
   const pass=document.getElementById('l-pass').value;
   try{
     const r=await fetch(`${url}/Users/AuthenticateByName`,{method:'POST',
-      headers:{'Content-Type':'application/json','X-Emby-Authorization':`MediaBrowser Client="MusicArchive",Device="Browser",DeviceId="${S.devId}",Version="1.0"`},
+      headers:{'Content-Type':'application/json','X-Emby-Authorization':`MediaBrowser Client="MusicArchive",Device="${MA_DEVICE}",DeviceId="${S.devId}",Version="1.0"`},
       body:JSON.stringify({Username:user,Pw:pass})});
     if(!r.ok)throw 0;
     const d=await r.json();
     S.url=url;S.token=d.AccessToken;S.uid=d.User.Id;S.uname=d.User.Name;
     localStorage.setItem('ma',JSON.stringify({url,tok:S.token,uid:S.uid,un:S.uname}));
+    rememberLogin(url,user,pass);
     bootApp();
   }catch{err.classList.add('show');btn.disabled=false;btn.textContent='Connect to Server';}
 }
-function doLogout(){if(!confirm('Sign out?'))return;localStorage.removeItem('ma');location.reload();}
+function doLogout(){
+  if(!confirm('Sign out?'))return;
+  localStorage.removeItem('ma');
+  // Signing out on purpose means forgetting the password too, otherwise the
+  // desktop app would just sign straight back in.
+  const done=()=>location.reload();
+  if(window.maDesktop){Promise.resolve(window.maDesktop.clearLogin()).catch(()=>{}).then(done);}
+  else done();
+}
+
+/* ---- Staying signed in ----
+   Everywhere: the server address and username are remembered (never the
+   password), so if the session ever ends you only retype the password.
+   Desktop app: the password is also kept, encrypted by Windows, so an
+   expired or revoked token is renewed silently and you never see the login
+   screen again unless you sign out yourself. */
+const MA_DEVICE=window.maDesktop?'Windows':'Browser';
+function prefillLogin(){
+  try{
+    const l=JSON.parse(localStorage.getItem('ma_last')||'null');
+    if(!l)return;
+    const u=document.getElementById('l-url'),n=document.getElementById('l-user');
+    if(u&&!u.value&&l.url)u.value=l.url;
+    if(n&&!n.value&&l.user)n.value=l.user;
+  }catch(_){}
+}
+function rememberLogin(url,user,pass){
+  try{localStorage.setItem('ma_last',JSON.stringify({url,user}));}catch(_){}
+  if(window.maDesktop){
+    Promise.resolve(window.maDesktop.saveLogin(url,user,pass)).catch(()=>{});
+    Promise.resolve(window.maDesktop.flush()).catch(()=>{});
+  }
+}
+/* Returns 'ok' | 'rejected' (server said the password is wrong) |
+   'nocreds' | 'offline'. Concurrent callers share one attempt. */
+let _reauthP=null;
+function silentReauth(){
+  if(!window.maDesktop)return Promise.resolve('nocreds');
+  if(_reauthP)return _reauthP;
+  _reauthP=(async()=>{
+    let c=null;
+    try{c=await window.maDesktop.loadLogin();}catch(_){}
+    if(!c||!c.url||!c.user)return 'nocreds';
+    let r;
+    try{
+      r=await fetch(`${c.url}/Users/AuthenticateByName`,{method:'POST',
+        headers:{'Content-Type':'application/json','X-Emby-Authorization':`MediaBrowser Client="MusicArchive",Device="${MA_DEVICE}",DeviceId="${S.devId}",Version="1.0"`},
+        body:JSON.stringify({Username:c.user,Pw:c.pass||''})});
+    }catch(_){return 'offline';}
+    if(r.status===401||r.status===403)return 'rejected';
+    if(!r.ok)return 'offline';
+    let d;try{d=await r.json();}catch(_){return 'offline';}
+    if(!d||!d.AccessToken||!d.User)return 'offline';
+    S.url=c.url;S.token=d.AccessToken;S.uid=d.User.Id;S.uname=d.User.Name;
+    try{localStorage.setItem('ma',JSON.stringify({url:S.url,tok:S.token,uid:S.uid,un:S.uname}));}catch(_){}
+    try{localStorage.setItem('ma_last',JSON.stringify({url:c.url,user:c.user}));}catch(_){}
+    Promise.resolve(window.maDesktop.flush()).catch(()=>{});
+    return 'ok';
+  })();
+  // Let a later failure try again, but not in a tight loop.
+  _reauthP.finally(()=>setTimeout(()=>{_reauthP=null;},10000));
+  return _reauthP;
+}
+async function desktopAutoLogin(){
+  const btn=document.getElementById('l-btn');
+  if(btn){btn.disabled=true;btn.textContent='Signing in…';}
+  let res='offline';
+  for(let i=0;i<6;i++){
+    _reauthP=null;
+    res=await silentReauth();
+    if(res!=='offline')break;
+    // Server not up yet (PC still booting, Wi-Fi reconnecting) — keep trying
+    // for about a minute before falling back to the form.
+    await new Promise(r=>setTimeout(r,Math.min(2000*(i+1),10000)));
+  }
+  if(res==='ok'){try{bootApp();}catch(e){console.error('bootApp failed:',e);}return;}
+  if(btn){btn.disabled=false;btn.textContent='Connect to Server';}
+  if(res==='rejected'){
+    const err=document.getElementById('login-err');
+    if(err)err.classList.add('show');
+  }
+}
 /* ── LOCAL RECENTLY PLAYED TRACKING ──
    Maintain our own list so the home page updates instantly when a track plays,
    without waiting for Jellyfin to refresh its "DatePlayed" index. */
@@ -2744,11 +2830,22 @@ async function restorePlaybackState(){
 /* ============================================================
    API
 ============================================================ */
-const AH=()=>({'X-Emby-Token':S.token,'X-Emby-Authorization':`MediaBrowser Client="MusicArchive",Device="Browser",DeviceId="${S.devId}",Version="1.0"`});
+const AH=()=>({'X-Emby-Token':S.token,'X-Emby-Authorization':`MediaBrowser Client="MusicArchive",Device="${MA_DEVICE}",DeviceId="${S.devId}",Version="1.0"`});
 async function api(path,params={}){
   const u=new URL(S.url+path);
   for(const[k,v]of Object.entries(params))if(v!==undefined)u.searchParams.set(k,v);
-  const r=await fetch(u,{headers:AH()});
+  let r=await fetch(u,{headers:AH()});
+  if(r.status===401&&window.maDesktop){
+    // Desktop app: get a fresh token with the saved login and carry on.
+    const res=await silentReauth();
+    if(res==='ok'){
+      const u2=new URL(S.url+path);
+      for(const[k,v]of Object.entries(params))if(v!==undefined)u2.searchParams.set(k,v);
+      r=await fetch(u2,{headers:AH()});
+    }else if(res==='offline'){
+      throw new Error('Unauthorized');
+    }
+  }
   if(r.status===401){
     // Token expired — clear and redirect to login
     localStorage.removeItem('ma');location.reload();throw new Error('Unauthorized');

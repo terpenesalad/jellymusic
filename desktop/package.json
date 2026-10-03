@@ -1,0 +1,61 @@
+{
+  "name": "music-archive",
+  "productName": "Music Archive",
+  "version": "1.0.0",
+  "description": "Music Archive for Windows",
+  "main": "main.js",
+  "author": "terpenesalad",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "io.github.terpenesalad.jellymusic",
+    "productName": "Music Archive",
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Music Archive",
+      "artifactName": "MusicArchive-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "MusicArchive-${version}-portable.${ext}"
+    }
+  }
+}

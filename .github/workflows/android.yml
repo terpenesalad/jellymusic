@@ -1,4 +1,4 @@
-name: Build APK
+name: Build apps (Android APK + Windows .exe)
 
 # Three ways in, so whichever feels natural works:
 #   * Publish a release from the GitHub website (any tag name)
@@ -26,7 +26,7 @@ on:
 # event, so without this the same APK would be built twice, in parallel,
 # racing to attach itself to one release.
 concurrency:
-  group: apk-${{ github.event.release.tag_name || github.ref }}
+  group: apps-${{ github.event.release.tag_name || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -34,7 +34,13 @@ permissions:
 
 jobs:
   build:
+    name: Android APK
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      name: ${{ steps.ver.outputs.name }}
+      semver: ${{ steps.ver.outputs.semver }}
+      stable: ${{ steps.signing.outputs.stable }}
 
     steps:
       - name: Check out
@@ -104,6 +110,10 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          # The Windows build needs a strict x.y.z version; anything else
+          # (e.g. "build-12") becomes 0.0.<run number>.
+          if echo "$NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then SEMVER="$NAME"; else SEMVER="0.0.$GITHUB_RUN_NUMBER"; fi
+          echo "semver=$SEMVER" >> "$GITHUB_OUTPUT"
           echo "Building $NAME as tag $TAG (code $CODE)"
 
       - name: Prepare signing key
@@ -161,26 +171,81 @@ jobs:
           path: ${{ steps.apk.outputs.path }}
           retention-days: 90
 
+  windows:
+    name: Windows .exe
+    needs: build              # reuses the version worked out above
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Build installer and portable .exe
+        working-directory: desktop
+        shell: bash
+        env:
+          # No code-signing certificate: don't go looking for one.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm ci
+          npm version "${{ needs.build.outputs.semver }}" --no-git-tag-version --allow-same-version
+          npx electron-builder --win --publish never
+          ls -la dist
+
+      - name: Upload as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MusicArchive-windows
+          path: |
+            desktop/dist/*.exe
+          retention-days: 90
+
+  release:
+    name: Publish release
+    needs: [build, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect the builds
+        uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - run: ls -la out
+
+      # One publish step for both, so the APK and the .exe never race each
+      # other to create the same release.
       - name: Publish the release
         uses: softprops/action-gh-release@v2
         with:
-          # An existing tag means the APK is attached to that release rather
-          # than a new one being made alongside it.
-          tag_name: ${{ steps.ver.outputs.tag }}
-          name: Music Archive ${{ steps.ver.outputs.name }}
-          files: ${{ steps.apk.outputs.path }}
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: Music Archive ${{ needs.build.outputs.name }}
+          files: out/*
           draft: false
           prerelease: false
           body: |
-            **Music Archive ${{ steps.ver.outputs.name }}**
+            **Music Archive ${{ needs.build.outputs.name }}**
 
-            Download the `.apk` below on your phone and open it to install.
-            Android will ask you to allow installing from your browser the
-            first time — that's expected for an app that doesn't come from
-            the Play Store.
+            **Android** — download the `.apk` on your phone and open it to
+            install. Android will ask you to allow installing from your
+            browser the first time; that's expected for an app that doesn't
+            come from the Play Store.
 
-            ${{ steps.signing.outputs.stable == 'false' && '> ⚠️ Signed with a throwaway key because no `KEYSTORE_BASE64` secret is set, so this build will not install over a previous one. See the README to fix that.' || '' }}
+            **Windows** — `MusicArchive-Setup-….exe` installs it with Start
+            menu and desktop shortcuts. `…-portable.exe` runs without
+            installing. Both share one sign-in. Windows SmartScreen will warn
+            the first time because the app isn't code-signed: click
+            **More info → Run anyway**.
 
-            The app loads the live site, so day-to-day changes to `index.html`
-            show up without reinstalling. You only need a new APK when the
-            native side changes.
+            ${{ needs.build.outputs.stable == 'false' && '> ⚠️ The APK is signed with a throwaway key because no `KEYSTORE_BASE64` secret is set, so it will not install over a previous one. See the README to fix that.' || '' }}
+
+            Both apps load the live site, so day-to-day changes to
+            `index.html` show up without reinstalling. You only need a new
+            download when the app shell itself changes.
