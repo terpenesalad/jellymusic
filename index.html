@@ -21,8 +21,18 @@
   }catch(e){}})();
   </script>
   <link rel="manifest" id="pwa-manifest" href="./manifest.webmanifest">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Figtree is served from this site (fonts/), not Google Fonts, so the
+       app looks the same with no internet — the Windows app on the server PC
+       and the offline phone app both rely on that. -->
+  <link rel="preload" href="./fonts/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    @font-face{font-family:'Figtree';font-style:normal;font-display:swap;font-weight:300 900;
+      src:url(./fonts/figtree-latin-ext-wght-normal.woff2) format('woff2');
+      unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+    @font-face{font-family:'Figtree';font-style:normal;font-display:swap;font-weight:300 900;
+      src:url(./fonts/figtree-latin-wght-normal.woff2) format('woff2');
+      unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+  </style>
   <style>
     :root{--bg:#0A0A0A;--bg2:#111;--bg3:#181818;--bg4:#282828;--bg5:#333;--accent:#E8B84B;--text:#FFF;--text2:#B3B3B3;--text3:#6B6B6B;--nav-h:64px;--mini-h:72px;--safe-t:var(--ma-safe-top,env(safe-area-inset-top,0px));--safe-b:var(--ma-safe-bottom,env(safe-area-inset-bottom,0px));}
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;scrollbar-width:none;}
@@ -718,6 +728,8 @@
         flex-shrink:0;
       }
       #sidebar-brand .brand-accent{color:var(--accent);}
+      #sidebar-server{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);cursor:default;}
+      #sidebar-server .srv-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px rgba(232,184,75,.6);}
 
       /* ── MINI PLAYER → BOTTOM BAR ── */
       #mini-player{
@@ -1491,7 +1503,7 @@ audio.volume=0.75;
 /* Bump this whenever index.html changes. It's shown in Settings and logged
    to the console on boot, so "am I actually running the new file?" is a
    question you can answer in two seconds instead of guessing. */
-const APP_BUILD='2026-09-27 · build 14';
+const APP_BUILD='2026-11-14 · build 15';
 console.log('%cMusic Archive '+APP_BUILD,'color:#E8B84B;font-weight:bold');
 
 let _deferredInstallPrompt=null;
@@ -1739,7 +1751,7 @@ else document.addEventListener('DOMContentLoaded',showInstallButtonIfNeeded);
   let d;
   try{d=JSON.parse(saved);}catch(e){return;}
   if(!d||!d.url||!d.tok)return;
-  Object.assign(S,{url:d.url,token:d.tok,uid:d.uid,uname:d.un});
+  Object.assign(S,{url:d.url,token:d.tok,uid:d.uid,uname:d.un,homeUrl:d.url,serverId:d.sid||''});
   /* Deferred deliberately. This IIFE sits about a fifth of the way down the
      script, but bootApp() reaches forward into state declared much further
      down — the offline blob map, the error counter, the preload element, the
@@ -1748,7 +1760,7 @@ else document.addEventListener('DOMContentLoaded',showInstallButtonIfNeeded);
      auto-login path (the exact path you hit every time you reopen the app
      with a saved session). Queueing it as a microtask means the rest of the
      script has fully evaluated before anything runs. */
-  const start=()=>{try{bootApp();}catch(e){console.error('bootApp failed:',e);}};
+  const start=()=>{bootWithBestServer();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else queueMicrotask(start);
 })();
@@ -1768,9 +1780,11 @@ async function doLogin(){
       body:JSON.stringify({Username:user,Pw:pass})});
     if(!r.ok)throw 0;
     const d=await r.json();
-    S.url=url;S.token=d.AccessToken;S.uid=d.User.Id;S.uname=d.User.Name;
-    localStorage.setItem('ma',JSON.stringify({url,tok:S.token,uid:S.uid,un:S.uname}));
+    S.url=url;S.homeUrl=url;S.token=d.AccessToken;S.uid=d.User.Id;S.uname=d.User.Name;S.serverId=d.ServerId||'';
+    S.onThisPC=isLocalBase(url);
+    localStorage.setItem('ma',JSON.stringify({url,tok:S.token,uid:S.uid,un:S.uname,sid:S.serverId}));
     rememberLogin(url,user,pass);
+    await chooseServer().catch(()=>{});
     bootApp();
   }catch{err.classList.add('show');btn.disabled=false;btn.textContent='Connect to Server';}
 }
@@ -1817,18 +1831,40 @@ function silentReauth(){
     let c=null;
     try{c=await window.maDesktop.loadLogin();}catch(_){}
     if(!c||!c.url||!c.user)return 'nocreds';
-    let r;
-    try{
-      r=await fetch(`${c.url}/Users/AuthenticateByName`,{method:'POST',
-        headers:{'Content-Type':'application/json','X-Emby-Authorization':`MediaBrowser Client="MusicArchive",Device="${MA_DEVICE}",DeviceId="${S.devId}",Version="1.0"`},
-        body:JSON.stringify({Username:c.user,Pw:c.pass||''})});
-    }catch(_){return 'offline';}
-    if(r.status===401||r.status===403)return 'rejected';
-    if(!r.ok)return 'offline';
-    let d;try{d=await r.json();}catch(_){return 'offline';}
-    if(!d||!d.AccessToken||!d.User)return 'offline';
-    S.url=c.url;S.token=d.AccessToken;S.uid=d.User.Id;S.uname=d.User.Name;
-    try{localStorage.setItem('ma',JSON.stringify({url:S.url,tok:S.token,uid:S.uid,un:S.uname}));}catch(_){}
+    if(!S.homeUrl)S.homeUrl=c.url;
+    /* On the PC that runs Jellyfin, sign in through localhost first: it
+       works with the internet down, where the saved address (Tailscale, a
+       domain) may not. Elsewhere nothing answers on localhost and this falls
+       straight through to the saved address. */
+    const bases=[];
+    for(const b of localServerCandidates())if(!bases.includes(b))bases.push(b);
+    if(!bases.includes(c.url))bases.push(c.url);
+    let d=null,base=null;
+    for(const b of bases){
+      const home=(b===c.url);
+      let r;
+      try{
+        r=await _timedFetch(`${b}/Users/AuthenticateByName`,{method:'POST',
+          headers:{'Content-Type':'application/json','X-Emby-Authorization':`MediaBrowser Client="MusicArchive",Device="${MA_DEVICE}",DeviceId="${S.devId}",Version="1.0"`},
+          body:JSON.stringify({Username:c.user,Pw:c.pass||''})},home?15000:4000);
+      }catch(_){continue;}
+      // Only the saved server's "wrong password" counts. Some other Jellyfin
+      // on this PC turning us down just means it isn't ours.
+      if(r.status===401||r.status===403){if(home)return 'rejected';continue;}
+      if(!r.ok)continue;
+      let j;try{j=await r.json();}catch(_){continue;}
+      if(!j||!j.AccessToken||!j.User)continue;
+      if(!home&&S.serverId&&j.ServerId&&j.ServerId!==S.serverId)continue;
+      d=j;base=b;break;
+    }
+    if(!d)return 'offline';
+    S.url=base;S.onThisPC=isLocalBase(base);
+    S.token=d.AccessToken;S.uid=d.User.Id;S.uname=d.User.Name;
+    if(d.ServerId)S.serverId=d.ServerId;
+    // Remember the saved address, never localhost, so a phone-style restore
+    // of this session elsewhere still points at the real server.
+    try{localStorage.setItem('ma',JSON.stringify({url:c.url,tok:S.token,uid:S.uid,un:S.uname,sid:S.serverId||''}));}catch(_){}
+    try{updateServerBadge();}catch(_){}
     try{localStorage.setItem('ma_last',JSON.stringify({url:c.url,user:c.user}));}catch(_){}
     Promise.resolve(window.maDesktop.flush()).catch(()=>{});
     return 'ok';
@@ -1849,13 +1885,144 @@ async function desktopAutoLogin(){
     // for about a minute before falling back to the form.
     await new Promise(r=>setTimeout(r,Math.min(2000*(i+1),10000)));
   }
-  if(res==='ok'){try{bootApp();}catch(e){console.error('bootApp failed:',e);}return;}
+  if(res==='ok'){await bootWithBestServer();return;}
   if(btn){btn.disabled=false;btn.textContent='Connect to Server';}
   if(res==='rejected'){
     const err=document.getElementById('login-err');
     if(err)err.classList.add('show');
   }
 }
+/* ---- Playing straight from this PC ----
+   In the Windows app on the PC that runs Jellyfin, the app talks to the
+   server at localhost instead of the saved address (Tailscale, LAN or a
+   domain). Localhost never leaves the machine, so with the internet down —
+   or the router off altogether — the whole library still plays, with
+   artwork, playlists, likes and lyrics. On any other PC nothing answers on
+   localhost and nothing changes. Phones never take this path.
+
+   S.homeUrl is the saved address and is what gets remembered.
+   S.url is whichever address is in use right now. */
+function isLocalBase(u){
+  try{const h=new URL(u).hostname;return h==='localhost'||h==='127.0.0.1'||h==='[::1]'||h==='::1';}
+  catch(_){return false;}
+}
+function localServerCandidates(){
+  if(!window.maDesktop)return [];
+  const ports=['8096'];
+  // If the saved address uses a custom http port, Jellyfin is probably
+  // listening on that port here too.
+  try{const u=new URL(S.homeUrl||S.url);if(u.protocol==='http:'&&u.port&&!ports.includes(u.port))ports.unshift(u.port);}catch(_){}
+  const out=[];
+  ports.forEach(p=>{out.push(`http://127.0.0.1:${p}`);out.push(`http://localhost:${p}`);});
+  return out;
+}
+function _timedFetch(url,opts={},ms=3000){
+  const ac=new AbortController();
+  const t=setTimeout(()=>ac.abort(),ms);
+  return fetch(url,{cache:'no-store',...opts,signal:ac.signal}).finally(()=>clearTimeout(t));
+}
+async function serverAnswers(base){
+  if(!base)return false;
+  try{const r=await _timedFetch(`${base}/System/Info/Public`,{},3000);return r.ok;}catch(_){return false;}
+}
+// Only the server we're signed in to accepts our token, so a 200 here proves
+// that whatever is on localhost really is the same Jellyfin.
+async function isOurServer(base){
+  if(!S.token||!S.uid)return false;
+  try{const r=await _timedFetch(`${base}/Users/${S.uid}`,{headers:AH()},3000);return r.ok;}catch(_){return false;}
+}
+async function findThisPCServer(){
+  for(const base of localServerCandidates()){
+    if(await isOurServer(base))return base;
+  }
+  return null;
+}
+async function chooseServer(){
+  if(!S.homeUrl)S.homeUrl=S.url;
+  if(!window.maDesktop||!S.url)return;
+  if(isLocalBase(S.url)){S.onThisPC=true;return;}
+  const local=await findThisPCServer();
+  if(local)useServer(local,true);
+}
+async function bootWithBestServer(){
+  try{await chooseServer();}catch(_){}
+  try{bootApp();}catch(e){console.error('bootApp failed:',e);}
+}
+function useServer(base,quiet){
+  if(!base||base===S.url)return;
+  const old=S.url;
+  const pos=playbackPosition();
+  S.url=base;
+  S.onThisPC=isLocalBase(base);
+  repointStream(old,pos);
+  updateServerBadge();
+  if(!quiet){
+    let label=base;try{label=new URL(base).host;}catch(_){}
+    showToast(S.onThisPC?'Playing straight from this PC':'Connected to '+label);
+  }
+}
+// Move the song that's playing over to the new address without losing the
+// spot. Downloaded songs play from disk and are left alone.
+function repointStream(oldBase,pos){
+  if(_radioStation||!S.track)return;
+  const src=audio.currentSrc||audio.src||'';
+  if(!oldBase||!src.startsWith(oldBase))return;
+  const id=S.track.Id;
+  releasePreload();
+  try{
+    if(effectiveQuality()==='original'){
+      _streamOffset=0;
+      audio.src=audioUrl(id);
+      audio.load();
+      audio.addEventListener('loadedmetadata',()=>{
+        if(!S.track||S.track.Id!==id)return;
+        try{if(pos>1&&isFinite(audio.duration)&&pos<audio.duration-1)audio.currentTime=pos;}catch(e){}
+        requestPlay('server switch',false);
+      },{once:true});
+    }else{
+      _streamOffset=pos;
+      audio.src=audioUrl(id,pos);
+      audio.load();
+      requestPlay('server switch',false);
+    }
+  }catch(e){}
+}
+/* Keeps an eye on things while the app runs: picks up Jellyfin on this PC
+   if it starts after the app, and if Jellyfin here is stopped, goes back to
+   the saved address (when that's reachable). */
+let _serverWatch=null;
+function startServerWatch(){
+  if(!window.maDesktop||_serverWatch)return;
+  let misses=0;
+  _serverWatch=setInterval(async()=>{
+    if(!S.token||!S.url)return;
+    try{
+      if(S.onThisPC){
+        if(!S.homeUrl||isLocalBase(S.homeUrl))return;
+        if(await serverAnswers(S.url)){misses=0;return;}
+        if(++misses<2)return;
+        if(await serverAnswers(S.homeUrl)){misses=0;useServer(S.homeUrl);}
+      }else{
+        const local=await findThisPCServer();
+        if(local)useServer(local);
+      }
+    }catch(_){}
+  },15000);
+}
+function updateServerBadge(){
+  const brand=document.getElementById('sidebar-brand');
+  if(!brand)return;
+  let b=document.getElementById('sidebar-server');
+  if(!S.onThisPC){if(b)b.remove();return;}
+  if(!b){
+    b=document.createElement('div');
+    b.id='sidebar-server';
+    b.title='Playing straight from the Jellyfin server on this PC — no internet needed';
+    b.innerHTML='<span class="srv-dot"></span>On this PC';
+    brand.appendChild(b);
+  }
+}
+
 /* ── LOCAL RECENTLY PLAYED TRACKING ──
    Maintain our own list so the home page updates instantly when a track plays,
    without waiting for Jellyfin to refresh its "DatePlayed" index. */
@@ -2703,6 +2870,8 @@ function bootApp(){
     b.innerHTML='Music<span class="brand-accent">Archive</span>';
     nav.insertBefore(b,nav.firstChild);
   }
+  updateServerBadge();
+  startServerWatch();
   gotoTab('home');
   prefetchLib();
   // Offline index FIRST: restorePlaybackState() builds an audio URL, and if
@@ -3144,6 +3313,8 @@ function qualityForBandwidth(mbps){
 // What the app should actually request right now.
 function effectiveQuality(){
   if(S.quality!=='auto')return S.quality;
+  // Same machine as the server: there's no link to protect, play the file.
+  if(S.onThisPC)return 'original';
   if(_bandwidth&&_bandwidth.mbps)return qualityForBandwidth(_bandwidth.mbps);
   return 'high';
 }
@@ -9212,7 +9383,7 @@ function showSettingsSheet(){
   sc.innerHTML=`
     <div style="padding:8px 20px 14px;display:flex;align-items:center;gap:12px;">
       <div class="home-avatar" style="width:42px;height:42px;font-size:17px;cursor:default;">${esc((S.uname[0]||'U').toUpperCase())}</div>
-      <div><div style="font-size:16px;font-weight:800;">${esc(S.uname||'User')}</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">Settings</div></div>
+      <div><div style="font-size:16px;font-weight:800;">${esc(S.uname||'User')}</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">Settings${S.onThisPC?' · <span style="color:var(--accent);">Playing from this PC</span>':''}</div></div>
     </div>
     <div class="sheet-action" onclick="toggleAutoplay()" style="justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:14px;">
@@ -10141,7 +10312,7 @@ audio.addEventListener('error',()=>{
   if(!S.track)return;
   // Offline and this track isn't downloaded → pause with a clear message
   // instead of skipping through tracks that will all fail the same way.
-  if(navigator.onLine===false&&!_offlineIndex[S.track.Id]){
+  if(navigator.onLine===false&&!S.onThisPC&&!_offlineIndex[S.track.Id]){
     _userWantsPlay=false;
     updatePlayIcons();
     showToast('You\'re offline — downloaded music still plays from the Offline tab');

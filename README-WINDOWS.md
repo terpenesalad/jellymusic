@@ -49,11 +49,40 @@ new version all bring you straight back in:
 
 Shortcuts: **F11** full screen, **Ctrl + / − / 0** zoom, **F5** reload.
 
+## No internet? Use it on the server PC
+
+Install the app on the PC that runs Jellyfin and it keeps working when the
+internet goes down — the whole library, artwork, playlists, likes, bangers
+and lyrics — because nothing it needs leaves that PC:
+
+- **The app opens offline.** A copy of the site ships inside the app. If
+  GitHub can't be reached it opens from that copy, at the same address, so
+  you're still signed in with your queue and settings intact. As soon as the
+  internet is back you get the latest version again.
+- **It talks to Jellyfin at `localhost`.** On the server PC the app checks
+  whether the Jellyfin running there is the one you're signed in to, and if
+  so uses it directly instead of your Tailscale/LAN address. The sidebar
+  shows **● On this PC** while it's doing that. Songs play at original
+  quality, since there's no connection to protect.
+- **It copes with Jellyfin starting late or stopping.** If Jellyfin starts
+  after the app, it switches over within about 15 seconds, mid-song, without
+  losing your place. If Jellyfin on the PC is stopped, it goes back to your
+  saved address (if that's reachable).
+- **The font is bundled too**, so it looks exactly the same offline.
+
+On any other PC nothing changes: there's no Jellyfin on `localhost`, so it
+uses your saved address as before. Internet radio stations still need the
+internet, of course. Phones can't reach the PC through Tailscale while the
+internet is down; downloaded music in the Offline tab still plays.
+
+It looks for Jellyfin on port 8096 (Jellyfin's default), or on the same
+port as your saved address if that's different.
+
 ## Building it yourself
 
 ```bash
 cd desktop
 npm ci
-npm start                # run it
+npm start                # run it (copies the site in first)
 npm run dist             # build the .exe files into desktop/dist
 ```

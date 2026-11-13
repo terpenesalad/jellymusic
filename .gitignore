@@ -11,3 +11,4 @@ android/app/build/
 android/local.properties
 tools/test/node_modules/
 tools/test/index.html
+desktop/site/

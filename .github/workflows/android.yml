@@ -211,6 +211,8 @@ jobs:
           : > build.log
           npm ci --no-audit --no-fund 2>&1 | tee -a build.log || fail
           npm version "${{ needs.build.outputs.semver }}" --no-git-tag-version --allow-same-version 2>&1 | tee -a build.log || fail
+          # Bundle the site into the app so it opens with no internet.
+          node scripts/copy-site.js 2>&1 | tee -a build.log || fail
           npx electron-builder --win --publish never 2>&1 | tee -a build.log || fail
           ls -la dist
 

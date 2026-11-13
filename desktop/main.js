@@ -14,12 +14,16 @@
  *     flyout's media controls all work, through the page's existing
  *     navigator.mediaSession code.
  *   - An http:// Jellyfin on your LAN or Tailscale works from the https app.
+ *   - It opens with no internet. A copy of the site ships inside the app
+ *     (desktop/site, copied in at build time) and is used whenever GitHub
+ *     Pages can't be reached. On the PC that runs Jellyfin the page then
+ *     talks to the server at localhost, so the whole library plays offline.
  */
 'use strict';
 
 const {
   app, BrowserWindow, Menu, ipcMain, safeStorage, session, shell,
-  powerSaveBlocker, screen,
+  powerSaveBlocker, screen, protocol, net,
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -27,6 +31,8 @@ const path = require('path');
 const APP_URL = 'https://terpenesalad.github.io/jellymusic/';
 const APP_ORIGIN = new URL(APP_URL).origin;
 const APP_ID = 'io.github.terpenesalad.jellymusic';
+const SITE_PATH = new URL(APP_URL).pathname; // '/jellymusic/'
+const SITE_DIR = path.join(__dirname, 'site');
 
 // A fixed profile folder, so the sign-in and library cache can't be orphaned
 // by a rename, and the installer and portable .exe share one session.
@@ -49,6 +55,10 @@ app.commandLine.appendSwitch('disable-features', [
   'PrivateNetworkAccessRespectPreflightResults',
   'BlockInsecurePrivateNetworkRequests',
   'CalculateNativeWinOcclusion', // a covered window must not be treated as hidden
+  // Chromium quietly rewrites http:// audio and artwork to https:// when the
+  // server is a name rather than an IP (a Tailscale machine name, mypc.local)
+  // and the https version doesn't exist — silent songs, blank covers.
+  'AutoupgradeMixedContent',
 ].join(','));
 // Chromium's own media-key handling routes keys to the page's mediaSession.
 app.commandLine.appendSwitch('enable-features', 'HardwareMediaKeyHandling');
@@ -159,8 +169,88 @@ function setPlaying(on) {
 }
 
 // ---------------------------------------------------------------- offline
-// If the site can't be reached at launch (no internet, GitHub having a
-// moment) show a quiet page that keeps retrying, rather than a blank window.
+/* Opening with no internet.
+ *
+ * Normally the page's own service worker already has a cached copy and the
+ * app opens offline by itself. This is the backstop for when it doesn't
+ * (first run, cache cleared, a worker mid-update): the first time the site
+ * fails to load, the app starts answering requests for its own address from
+ * the copy bundled inside it.
+ *
+ * It answers *as* https://terpenesalad.github.io/jellymusic/, not from a
+ * file:// path. That matters: your sign-in, queue, bangers and downloads
+ * are stored per website address, so a copy served from anywhere else
+ * would open signed out with an empty library.
+ *
+ * It still tries the real site first every time, so you get the newest
+ * version as soon as the internet is back. Requests to anything else
+ * (your Jellyfin, radio streams) go straight through untouched. */
+let fallbackOn = false;
+
+const TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.woff2': 'font/woff2',
+  '.txt': 'text/plain; charset=utf-8',
+};
+
+function bundledResponse(pathname) {
+  let rel = decodeURIComponent(pathname.slice(SITE_PATH.length)) || 'index.html';
+  if (rel.endsWith('/')) rel += 'index.html';
+  const file = path.normalize(path.join(SITE_DIR, rel));
+  if (!file.startsWith(SITE_DIR + path.sep)) return null;
+  let body;
+  try { body = fs.readFileSync(file); } catch (_) { return null; }
+  const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
+  // Service workers must be allowed to control the whole site path.
+  const headers = { 'content-type': type, 'cache-control': 'no-cache' };
+  if (rel === 'sw.js') headers['service-worker-allowed'] = SITE_PATH;
+  return new Response(body, { status: 200, headers });
+}
+
+function passThrough(req) {
+  return net.fetch(req, { bypassCustomProtocolHandlers: true });
+}
+
+function withTimeout(p, ms) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+}
+
+function enableSiteFallback() {
+  if (fallbackOn) return true;
+  if (!fs.existsSync(path.join(SITE_DIR, 'index.html'))) return false;
+  try {
+    protocol.handle('https', async (req) => {
+      let u;
+      try { u = new URL(req.url); } catch (_) { return passThrough(req); }
+      const ours = u.origin === APP_ORIGIN && req.method === 'GET' &&
+        (u.pathname === SITE_PATH.slice(0, -1) || u.pathname.startsWith(SITE_PATH));
+      if (!ours) return passThrough(req);
+      if (u.pathname === SITE_PATH.slice(0, -1)) {
+        return Response.redirect(APP_ORIGIN + SITE_PATH + u.search, 301);
+      }
+      // Live site first, bundled copy if it doesn't answer in time.
+      try {
+        const res = await withTimeout(passThrough(req), 5000);
+        if (res.ok || res.status === 304) return res;
+      } catch (_) {}
+      return bundledResponse(u.pathname) ||
+        new Response('Not available offline', { status: 504, headers: { 'content-type': 'text/plain' } });
+    });
+    fallbackOn = true;
+    console.warn('site unreachable — using the copy bundled with the app');
+    return true;
+  } catch (e) {
+    console.error('could not enable offline copy', e);
+    return false;
+  }
+}
+
+// Last resort if even the bundled copy can't be served: a quiet page that
+// keeps retrying, rather than a blank window.
 function offlinePage() {
   const html = `<!doctype html><meta charset="utf-8"><title>Music Archive</title>
 <style>html,body{height:100%;margin:0;background:#0a0a0a;color:#aaa;
@@ -175,6 +265,19 @@ function scheduleRetry() {
   retryTimer = setTimeout(() => {
     if (win && !win.isDestroyed()) win.loadURL(APP_URL).catch(() => {});
   }, 5000);
+}
+
+// A dead connection doesn't always fail fast: DNS or the TCP connect can
+// hang for a long time. If the page hasn't even started rendering after
+// 15 seconds, stop waiting and open the bundled copy.
+let launchTimer = null;
+function watchLaunch() {
+  clearTimeout(launchTimer);
+  if (fallbackOn) return;
+  launchTimer = setTimeout(() => {
+    if (!win || win.isDestroyed() || fallbackOn) return;
+    if (enableSiteFallback()) win.loadURL(APP_URL).catch(() => {});
+  }, 15000);
 }
 
 // ---------------------------------------------------------------- window
@@ -236,9 +339,17 @@ function createWindow() {
   wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
     if (!isMainFrame || code === -3 /* aborted, e.g. a redirect */) return;
     console.warn('load failed', code, desc, url);
-    if (!String(url).startsWith('data:')) wc.loadURL(offlinePage()).catch(() => {});
+    if (String(url).startsWith('data:')) { scheduleRetry(); return; }
+    // No internet: open the copy that ships with the app.
+    if (!fallbackOn && enableSiteFallback()) {
+      clearTimeout(launchTimer);
+      wc.loadURL(APP_URL).catch(() => {});
+      return;
+    }
+    wc.loadURL(offlinePage()).catch(() => {});
     scheduleRetry();
   });
+  wc.on('dom-ready', () => clearTimeout(launchTimer));
 
   // If the page crashes or is killed for memory, bring it straight back. The
   // queue and position are saved, so it resumes where it was.
@@ -277,6 +388,7 @@ function createWindow() {
   win.on('close', () => { saveBounds(); flushStorage(); });
   win.on('closed', () => { win = null; });
 
+  watchLaunch();
   win.loadURL(APP_URL).catch(() => {});
 }
 

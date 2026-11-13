@@ -8,7 +8,10 @@
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
+    "copy-site": "node scripts/copy-site.js",
+    "prestart": "node scripts/copy-site.js",
     "start": "electron .",
+    "predist": "node scripts/copy-site.js",
     "dist": "electron-builder --win --publish never"
   },
   "devDependencies": {
@@ -22,7 +25,8 @@
       "main.js",
       "preload.js",
       "icon.png",
-      "package.json"
+      "package.json",
+      "site/**/*"
     ],
     "directories": {
       "buildResources": "build",

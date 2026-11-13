@@ -3,14 +3,16 @@
    https://terpenesalad.github.io/jellymusic/sw.js
    Bump CACHE_VERSION whenever you change index.html to force an update. */
 
-const CACHE_VERSION = 'ma-v10';
+const CACHE_VERSION = 'ma-v11';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
-  './icon-512-maskable.png'
+  './icon-512-maskable.png',
+  './fonts/figtree-latin-wght-normal.woff2',
+  './fonts/figtree-latin-ext-wght-normal.woff2'
 ];
 
 // How long we wait for the network before falling back to the cached copy.
